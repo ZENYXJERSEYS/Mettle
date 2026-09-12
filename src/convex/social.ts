@@ -210,6 +210,20 @@ export const listMyFriendRequests = query({
   },
 });
 
+/** Outgoing pending requests (so Explore can show an honest "Requested" state). */
+export const listMyOutgoingRequests = query({
+  args: {},
+  handler: async (ctx) => {
+    const me = await getAuthUserId(ctx);
+    if (!me) return [];
+    const rows = await ctx.db
+      .query("friendRequests")
+      .withIndex("by_from", (q) => q.eq("fromUserId", me).eq("status", "pending"))
+      .collect();
+    return rows.map((r) => ({ toKey: r.toUserId, createdAt: r.createdAt }));
+  },
+});
+
 /** Accepted friends with live progression. */
 export const listMyFriends = query({
   args: {},

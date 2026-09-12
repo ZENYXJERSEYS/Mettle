@@ -5,6 +5,7 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "@/convex/_generated/api";
 import {
   Coins,
+  Compass,
   Flame,
   Swords,
   Trophy,
@@ -12,14 +13,17 @@ import {
   LayoutDashboard,
   LogOut,
   Store,
+  UserRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const NAV = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/dashboard", label: "Quests", icon: LayoutDashboard },
+  { to: "/explore", label: "Explore", icon: Compass },
+  { to: "/profile", label: "Hero", icon: UserRound },
   { to: "/shop", label: "Shop", icon: Store },
-  { to: "/inventory", label: "Inventory", icon: Backpack },
-  { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
+  { to: "/inventory", label: "Gear", icon: Backpack },
+  { to: "/leaderboard", label: "Ranks", icon: Trophy },
 ];
 
 export default function GameShell({ children }: { children: ReactNode }) {
@@ -97,7 +101,7 @@ export default function GameShell({ children }: { children: ReactNode }) {
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border/50 bg-background/90 backdrop-blur-md md:hidden"
         aria-label="Primary mobile"
       >
-        <div className="mx-auto grid w-full max-w-md grid-cols-4">
+        <div className="mx-auto grid w-full max-w-md grid-cols-6">
           {NAV.map((n) => {
             const active = location.pathname === n.to;
             return (
