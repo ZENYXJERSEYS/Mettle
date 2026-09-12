@@ -4,6 +4,20 @@ import * as THREE from "three";
 
 export type HeroState = "idle" | "pulse" | "levelup";
 
+/** One equipped relic, as returned by api.shop.getMyEquipped. */
+export type EquippedItem = {
+  key: string;
+  name: string;
+  tint: string;
+  rarity: string;
+  category: string;
+  materialType?: string;
+  titleGrant?: string;
+};
+
+/** Equipped loot keyed by category — drives colors + material treatment. */
+export type EquippedMap = Record<string, EquippedItem | undefined>;
+
 /** Inline float: gentle vertical bob + sway (replaces drei's Float). */
 function FloatGroup({
   children,
@@ -78,11 +92,30 @@ function EnergyDust({
   );
 }
 
+/** Rarity → material treatment for the crystal shell. */
+function rarityMaterial(rarity: string | undefined) {
+  switch (rarity) {
+    case "mythic":
+      return { roughness: 0.05, metalness: 0.25, transmission: 0.95, clearcoat: 1, glow: 1.35 };
+    case "legendary":
+      return { roughness: 0.06, metalness: 0.2, transmission: 0.9, clearcoat: 0.9, glow: 1.2 };
+    case "epic": // polished metal
+      return { roughness: 0.08, metalness: 0.75, transmission: 0.35, clearcoat: 1, glow: 1 };
+    case "rare": // violet glass
+      return { roughness: 0.15, metalness: 0.25, transmission: 0.75, clearcoat: 0.8, glow: 0.9 };
+    case "uncommon": // cyan energy
+      return { roughness: 0.22, metalness: 0.15, transmission: 0.6, clearcoat: 0.5, glow: 0.8 };
+    default: // matte slate
+      return { roughness: 0.4, metalness: 0.05, transmission: 0.4, clearcoat: 0.2, glow: 0.65 };
+  }
+}
+
 interface CrystalProps {
   form: number; // 1..4 visual tier
   level: number;
   state: HeroState;
-  tint?: string | null; // equipped loot hex override
+  tint?: string | null; // simple aura-tint override (kept for compat)
+  equipped?: EquippedMap | null; // full equipped loot by category
 }
 
 const FORM_COLORS: Record<number, { shell: string; core: string; rim: string }> = {
@@ -92,7 +125,7 @@ const FORM_COLORS: Record<number, { shell: string; core: string; rim: string }> 
   4: { shell: "#f0abfc", core: "#fde68a", rim: "#f5d0fe" },
 };
 
-function CoreCrystal({ form, level, state, tint }: CrystalProps) {
+function CoreCrystal({ form, level, state, tint, equipped }: CrystalProps) {
   const group = useRef<THREE.Group>(null);
   const shell = useRef<THREE.Mesh>(null);
   const inner = useRef<THREE.Mesh>(null);
@@ -101,8 +134,19 @@ function CoreCrystal({ form, level, state, tint }: CrystalProps) {
   const phase = useRef<{ t: number; active: string }>({ t: 0, active: state });
 
   const base = FORM_COLORS[Math.min(4, Math.max(1, form))];
-  const colors = tint ? { shell: tint, core: tint, rim: tint } : base;
+  // category-specific loot: aura → glow color; core → inner energy; skin → shell
+  const auraTint = equipped?.aura?.tint ?? tint ?? null;
+  const coreTint = equipped?.core?.tint ?? null;
+  const skinTint = equipped?.skin?.tint ?? null;
+  const colors = {
+    shell: skinTint ?? auraTint ?? base.shell,
+    core: coreTint ?? auraTint ?? base.core,
+    rim: auraTint ?? base.rim,
+  };
   const ringCount = useMemo(() => Math.min(1 + form, 4), [form]);
+  const mat = rarityMaterial(equipped?.aura?.rarity);
+
+  const effectGlow = equipped?.effect ? 1.35 : 1;
 
   // Reset phase when state changes (replay-safe)
   useEffect(() => {
@@ -129,7 +173,7 @@ function CoreCrystal({ form, level, state, tint }: CrystalProps) {
       g.scale.setScalar(THREE.MathUtils.lerp(g.scale.x, breathe, 0.08));
       if (inner.current) {
         const m = inner.current.material as THREE.MeshStandardMaterial;
-        m.emissiveIntensity = 1.4 + Math.sin(s.clock.elapsedTime * 1.3) * 0.35;
+        m.emissiveIntensity = (1.4 + Math.sin(s.clock.elapsedTime * 1.3) * 0.35) * effectGlow;
       }
       if (burstLight.current) burstLight.current.intensity = 0;
       if (ringsRef.current) {
@@ -182,20 +226,20 @@ function CoreCrystal({ form, level, state, tint }: CrystalProps) {
 
   return (
     <group ref={group}>
-      {/* outer crystal shell */}
+      {/* outer crystal shell — material treatment from equipped rarity */}
       <mesh ref={shell}>
         <icosahedronGeometry args={[1.15, form >= 3 ? 1 : 0]} />
         <meshPhysicalMaterial
           color={colors.shell}
-          roughness={0.12}
-          metalness={0.1}
-          transmission={0.75}
+          roughness={mat.roughness}
+          metalness={mat.metalness}
+          transmission={mat.transmission}
           thickness={1.6}
           ior={1.45}
-          clearcoat={0.6}
+          clearcoat={mat.clearcoat}
           clearcoatRoughness={0.25}
           emissive={colors.rim}
-          emissiveIntensity={0.12}
+          emissiveIntensity={0.12 * mat.glow}
           transparent
           opacity={0.92}
           flatShading
@@ -251,7 +295,7 @@ function CoreCrystal({ form, level, state, tint }: CrystalProps) {
   );
 }
 
-export default function HeroCrystal({ form, level, state, tint }: CrystalProps) {
+export default function HeroCrystal({ form, level, state, tint, equipped }: CrystalProps) {
   return (
     <Canvas
       dpr={[1, 1.75]}
@@ -264,7 +308,7 @@ export default function HeroCrystal({ form, level, state, tint }: CrystalProps) 
       <pointLight position={[-4, -2, 2]} intensity={0.5} color="#7dd3fc" />
       <pointLight position={[3, 2, -3]} intensity={0.7} color="#a78bfa" />
       <FloatGroup speed={1.4} bob={0.12} sway={0.06}>
-        <CoreCrystal form={form} level={level} state={state} tint={tint} />
+        <CoreCrystal form={form} level={level} state={state} tint={tint} equipped={equipped} />
       </FloatGroup>
     </Canvas>
   );

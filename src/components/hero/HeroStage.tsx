@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import type { HeroState } from "./HeroCrystal";
+import type { EquippedMap, HeroState } from "./HeroCrystal";
 
 const HeroCrystal = lazy(() => import("./HeroCrystal"));
 
@@ -36,7 +36,15 @@ const FALLBACK_COLORS: Record<number, string> = {
 };
 
 /** Static CSS fallback mirroring the crystal's identity. */
-function CrystalFallback({ form, state, tint }: { form: number; state: HeroState; tint?: string | null }) {
+function CrystalFallback({
+  form,
+  state,
+  tint,
+}: {
+  form: number;
+  state: HeroState;
+  tint?: string | null;
+}) {
   const color = tint ?? FALLBACK_COLORS[Math.min(4, Math.max(1, form))];
   const glow =
     state === "levelup" ? 0.9 : state === "pulse" ? 0.65 : 0.35;
@@ -72,26 +80,29 @@ export default function HeroStage({
   level,
   state,
   tint,
+  equipped,
   className,
 }: {
   form: number;
   level: number;
   state: HeroState;
   tint?: string | null;
+  equipped?: EquippedMap | null;
   className?: string;
 }) {
   const reduced = useReducedMotion();
   const webgl = useWebGLAvailable();
   const canRender3D = webgl === true && !reduced;
+  const auraTint = equipped?.aura?.tint ?? tint ?? null;
 
   return (
     <div className={`relative ${className ?? ""}`}>
       {canRender3D ? (
-        <Suspense fallback={<CrystalFallback form={form} state="idle" />}>
-          <HeroCrystal form={form} level={level} state={state} tint={tint} />
+        <Suspense fallback={<CrystalFallback form={form} state="idle" tint={auraTint} />}>
+          <HeroCrystal form={form} level={level} state={state} tint={auraTint} equipped={equipped} />
         </Suspense>
       ) : (
-        <CrystalFallback form={form} state={reduced ? "idle" : state} />
+        <CrystalFallback form={form} state={reduced ? "idle" : state} tint={auraTint} />
       )}
       {/* atmospheric floor glow */}
       <div

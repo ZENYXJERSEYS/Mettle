@@ -28,6 +28,7 @@ import {
   Trophy,
   Zap,
   Crown,
+  Award,
   ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
@@ -260,16 +261,32 @@ export default function Dashboard() {
                     {equippedByCategory?.title?.titleGrant ?? character.title}
                   </div>
                   {equippedByCategory && (
-                    <div
-                      className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest"
-                      style={{
-                        background: `${(equippedByCategory.aura ?? equippedByCategory.frame)?.tint ?? "#a78bfa"}1f`,
-                        color: (equippedByCategory.aura ?? equippedByCategory.frame)?.tint ?? "#a78bfa",
-                      }}
-                    >
-                      <Sparkles className="size-3" />
-                      {(equippedByCategory.aura ?? equippedByCategory.frame)?.name}
-                    </div>
+                    <>
+                      {(equippedByCategory.aura ?? equippedByCategory.core) && (
+                        <div
+                          className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest"
+                          style={{
+                            background: `${(equippedByCategory.aura ?? equippedByCategory.core)?.tint}1f`,
+                            color: (equippedByCategory.aura ?? equippedByCategory.core)?.tint,
+                          }}
+                        >
+                          <Sparkles className="size-3" />
+                          {(equippedByCategory.aura ?? equippedByCategory.core)?.name}
+                        </div>
+                      )}
+                      {equippedByCategory.badge && (
+                        <div
+                          className="ml-1.5 mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest"
+                          style={{
+                            background: `${equippedByCategory.badge.tint}1f`,
+                            color: equippedByCategory.badge.tint,
+                          }}
+                        >
+                          <Award className="size-3" />
+                          {equippedByCategory.badge.name}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
                 <div className="text-right">
@@ -282,13 +299,23 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* 3D hero — tinted by equipped aura; title override applied in identity block */}
-              <div className="relative mx-auto h-64 w-full max-w-80 sm:h-72">
+              {/* 3D hero — tinted by equipped aura/core/skin; frame ring from equipped frame */}
+              <div
+                className="relative mx-auto h-64 w-full max-w-80 rounded-2xl p-1 sm:h-72"
+                style={
+                  equippedByCategory?.frame
+                    ? {
+                        border: `1px solid ${equippedByCategory.frame.tint}55`,
+                        boxShadow: `0 0 24px ${equippedByCategory.frame.tint}2e`,
+                      }
+                    : undefined
+                }
+              >
                 <HeroStage
                   form={character.form}
                   level={character.level}
                   state={heroState}
-                  tint={equippedByCategory?.aura?.tint ?? null}
+                  equipped={equippedByCategory}
                 />
               </div>
 

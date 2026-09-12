@@ -116,14 +116,17 @@ const schema = defineSchema(
 
     // Shop catalog — seeded once, idempotent
     shopItems: defineTable({
-      key: v.string(), // stable catalog key, e.g. "ember_halo"
+      key: v.string(), // stable catalog key, e.g. "astral_mantle"
       name: v.string(),
       description: v.string(),
       price: v.number(),
-      rarity: v.string(), // common | uncommon | rare | epic | legendary
-      category: v.string(), // avatar | aura | frame | title | effect
+      rarity: v.string(), // common | uncommon | rare | epic | legendary | mythic
+      category: v.string(), // aura | core | skin | frame | title | badge | background | effect
       tint: v.string(), // hex color applied to the 3D hero / UI chrome
       icon: v.string(), // lucide icon name
+      materialType: v.optional(v.string()), // matte | energy | glass | metal | crystal | cosmic
+      isUnique: v.optional(v.boolean()),
+      featured: v.optional(v.boolean()),
       titleGrant: v.optional(v.string()), // display title granted when equipped
     }).index("by_key", ["key"]),
 
@@ -132,10 +135,18 @@ const schema = defineSchema(
       userId: v.id("users"),
       itemKey: v.string(),
       equipped: v.boolean(),
-      purchasedAt: v.number(),
+      acquiredAt: v.number(), // renamed from purchasedAt
     })
       .index("by_user", ["userId"])
       .index("by_user_item", ["userId", "itemKey"]),
+
+    // Immutable purchase receipts
+    purchaseTransactions: defineTable({
+      userId: v.id("users"),
+      itemKey: v.string(),
+      pricePaid: v.number(),
+      purchasedAt: v.number(),
+    }).index("by_user", ["userId"]),
 
     // Profile settings — one row per user, created lazily
     userSettings: defineTable({
