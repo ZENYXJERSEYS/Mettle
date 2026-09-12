@@ -48,6 +48,7 @@ export default function AdventureLog({
         icon: string;
         xp?: number | undefined;
         gold?: number | undefined;
+        reflection?: string | undefined;
         createdAt: number;
       }[]
     | undefined;
@@ -113,6 +114,11 @@ export default function AdventureLog({
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm">{e.message}</div>
                   <div className="text-[11px] text-muted-foreground/70">{timeAgo(e.createdAt)}</div>
+                  {e.reflection && (
+                    <div className="mt-1 border-l-2 border-primary/30 pl-2 text-xs italic leading-relaxed text-foreground/75">
+                      Reflection: {e.reflection}
+                    </div>
+                  )}
                 </div>
                 {e.kind === "quest_completed" && (
                   <div className="shrink-0 text-right font-mono text-[11px]">

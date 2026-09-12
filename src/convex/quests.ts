@@ -7,6 +7,7 @@ import {
   DIFFICULTY_META,
   dayKeyFromTimestamp,
   validateQuestInput,
+  validateReflection,
 } from "./gameRules";
 
 /** All my quests, active first. */
@@ -130,8 +131,11 @@ interface CompleteQuestResult {
 }
 
 export const completeQuest = mutation({
-  args: { questId: v.id("quests") },
-  handler: async (ctx, { questId }): Promise<CompleteQuestResult> => {
+  args: {
+    questId: v.id("quests"),
+    honest: v.optional(v.boolean()), // from the truthful-completion prompt
+  },
+  handler: async (ctx, { questId, honest }): Promise<CompleteQuestResult> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
@@ -169,7 +173,7 @@ export const completeQuest = mutation({
     });
 
     // 5. Record completion record (duplicate-protection anchor)
-    await ctx.db.insert("questCompletions", {
+    const completionId = await ctx.db.insert("questCompletions", {
       userId,
       questId,
       title: quest.title,
@@ -181,6 +185,7 @@ export const completeQuest = mutation({
       attrGain: meta.attrGain,
       dayKey,
       completedAt: now,
+      honest: honest !== false, // truthful by default; explicit false records an unconfirmed claim
     });
 
     // 6. Credit character (xp/gold/attr/streak/level) via shared internal fn
@@ -193,14 +198,15 @@ export const completeQuest = mutation({
       dayKey,
     });
 
-    // 7. Activity log
+    // 7. Activity log — message reflects the honest report contract
     await ctx.db.insert("activityLog", {
       userId,
       kind: "quest_completed",
-      message: `Completed: ${quest.title}`,
+      message: `${honest === false ? "Completed" : "Completed honestly"}: ${quest.title}`,
       icon: "Swords",
       xp: meta.xp,
       gold: meta.gold,
+      completionId,
       dayKey,
       createdAt: now + 1,
     });
@@ -220,6 +226,7 @@ export const completeQuest = mutation({
     return {
       alreadyCompleted: false,
       questId,
+      completionId,
       reward: {
         xp: meta.xp,
         gold: meta.gold,
@@ -235,6 +242,46 @@ export const completeQuest = mutation({
           }
         : null,
     };
+  },
+});
+
+/** Save a one-sentence reflection on an honest completion. */
+export const saveReflection = mutation({
+  args: {
+    completionId: v.id("questCompletions"),
+    text: v.string(),
+  },
+  handler: async (ctx, { completionId, text }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const completion = await ctx.db.get(completionId);
+    if (!completion) throw new Error("Completion not found");
+    if (completion.userId !== userId) throw new Error("Not your completion");
+    if (completion.honest === false)
+      throw new Error("Reflections are only saved for honest completions");
+    if (completion.reflection)
+      throw new Error("Reflection already saved for this quest.");
+
+    const vres = validateReflection(text);
+    if (!vres.ok) throw new Error(vres.error);
+
+    await ctx.db.patch(completion._id, {
+      reflection: vres.text,
+      reflectedAt: Date.now(),
+    });
+
+    // mirror the reflection onto the Adventure Log entry
+    const logEntry = await ctx.db
+      .query("activityLog")
+      .withIndex("by_user", (q) => q.eq("userId", completion.userId))
+      .order("desc")
+      .filter((q) => q.eq(q.field("completionId"), completion._id))
+      .first();
+    if (logEntry) {
+      await ctx.db.patch(logEntry._id, { reflection: vres.text });
+    }
+    return { ok: true };
   },
 });
 

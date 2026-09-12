@@ -51,6 +51,18 @@ XP bar + hero pulse + floats ◀──   returns reward diff (+ levelUp?)
 - **Streaks:** UTC day keys — multiple completions on one day count once, consecutive days increment, missed days reset gently
 - **Crystal forms (3D hero):** 4 tiers, unlocked at levels 1 / 5 / 10 / 20
 
+## Truthful Completions
+
+Mettle asks every user to pause and be honest before claiming rewards.
+
+- **Confirmation prompt** — "Did you genuinely complete this quest?" before XP is granted. Choosing "Not yet" keeps the quest active with no punishment, no lost streak, no shame.
+- **Reflection step** — after an honest completion, one optional sentence saved to the completion record and mirrored in the Adventure Log. Prompts are category-specific (study → "What did you understand better?", fitness → "What did your body accomplish?", ...).
+- **Token framing** — rewards float with "A small token for showing up. The real progress is yours." The dashboard states: "XP is a token of commitment, not a measurement of intelligence, knowledge, health, or personal worth."
+- **Truthful Mode setting** — profile toggle, enabled by default, stored per user in `userSettings`. Turning it off is an explicit user choice, not surveillance.
+- **Honest logging** — completion log entries read "Completed honestly: <quest>"; the completion row stores `honest` and `reflection` server-side.
+
+> Be truthful to yourself. Mettle can reward your commitment, but only you know what you truly gained.
+
 ## Getting Started
 
 ```bash
@@ -106,6 +118,7 @@ No secrets are committed. In this managed environment both values are injected a
 - Email OTP + anonymous guest auth with protected routes
 - Persistent character: level, XP, Gold, streak, 6 attributes, titles, crystal form
 - Quest create/complete/delete with server-calculated rewards
+- Truthful completion system: honesty prompt, category-specific reflections, shame-free "Not yet" state, Truthful Mode setting
 - Atomic, idempotent completion transaction with ownership checks
 - Adventure Log with real event history
 - Molten-metal XP bar, attribute instrument panels, reward float choreography

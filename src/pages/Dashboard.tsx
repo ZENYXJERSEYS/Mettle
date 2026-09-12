@@ -11,6 +11,10 @@ import AttributePanel from "@/components/game/AttributePanel";
 import QuestCard from "@/components/game/QuestCard";
 import NewQuestComposer from "@/components/game/NewQuestComposer";
 import AdventureLog from "@/components/game/AdventureLog";
+import TruthfulCompletionModal, {
+  type TruthfulStage,
+} from "@/components/game/TruthfulCompletionModal";
+import { Switch } from "@/components/ui/switch";
 import LevelUpModal, { type LevelUpData } from "@/components/game/LevelUpModal";
 import RewardFloats, { type RewardPayload } from "@/components/game/RewardFloats";
 import { levelFromXp, titleForLevel, CATEGORY_META } from "@/convex/gameRules";
@@ -24,6 +28,7 @@ import {
   Trophy,
   Zap,
   Crown,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -73,6 +78,8 @@ export default function Dashboard() {
       }
     | null
     | undefined;
+  const settings = useQuery(api.settings.getMySettings);
+  const setTruthfulModeSetting = useMutation(api.settings.setTruthfulMode);
   const createCharacter = useMutation(api.characters.createCharacter);
   const completeQuest = useMutation(api.quests.completeQuest);
   const deleteQuest = useMutation(api.quests.deleteQuest);
@@ -91,6 +98,13 @@ export default function Dashboard() {
   const [reward, setReward] = useState<RewardPayload | null>(null);
   const [levelUp, setLevelUp] = useState<LevelUpData | null>(null);
   const [hotAttr, setHotAttr] = useState<string | null>(null);
+  const [truthful, setTruthful] = useState<{
+    questId: string;
+    stage: TruthfulStage;
+    completionId: string | null;
+  } | null>(null);
+
+  const truthfulModeEnabled = settings?.truthfulMode ?? true;
 
   const lvl = character ? levelFromXp(character.xp) : null;
 
@@ -107,11 +121,11 @@ export default function Dashboard() {
     )[0];
   }, [activeQuests]);
 
-  const handleComplete = async (questId: string) => {
+  const handleComplete = async (questId: string, honest?: boolean) => {
     if (completingId) return; // lock against duplicate clicks
     setCompletingId(questId);
     try {
-      const result = await completeQuest({ questId: questId as never });
+      const result = await completeQuest({ questId: questId as never, honest });
       if (result.alreadyCompleted) return; // idempotent retry — no fabricated rewards
       const r = result.reward!;
       setJustCompletedIds((s) => new Set(s).add(questId));
@@ -120,6 +134,17 @@ export default function Dashboard() {
       setHeroState("pulse");
       if (result.levelUp) {
         setTimeout(() => setLevelUp(result.levelUp!), 1400);
+      } else if (honest === true && result.completionId) {
+        // offer the reflection step once the reward choreography has played
+        setTimeout(
+          () =>
+            setTruthful({
+              questId,
+              stage: "reflect",
+              completionId: result.completionId ?? null,
+            }),
+          1250,
+        );
       }
       setTimeout(() => setHeroState("idle"), 1250);
       setTimeout(() => setHotAttr(null), 2200);
@@ -130,6 +155,33 @@ export default function Dashboard() {
       setCompletingId(null);
     }
   };
+
+  // entry point for every Complete control: truthfulness prompt unless disabled
+  const requestComplete = (questId: string) => {
+    if (completingId) return;
+    if (truthfulModeEnabled) {
+      setTruthful({ questId, stage: "confirm", completionId: null });
+    } else {
+      void handleComplete(questId, undefined);
+    }
+  };
+
+  const handleTruthfulConfirm = (honest: boolean) => {
+    if (!truthful) return;
+    if (honest) {
+      const questId = truthful.questId;
+      setTruthful(null); // reveal the reward choreography
+      void handleComplete(questId, true);
+    } else {
+      // "Not yet" — no punishment, no server call, quest stays active
+      setTruthful({ ...truthful, stage: "notYet", completionId: null });
+    }
+  };
+
+  const truthfulQuest = useMemo(
+    () => (quests ?? []).find((q) => q._id === truthful?.questId) ?? null,
+    [quests, truthful?.questId],
+  );
 
   const handleDelete = async (questId: string) => {
     try {
@@ -243,6 +295,10 @@ export default function Dashboard() {
               {/* XP */}
               <div className="relative z-10">
                 <MoltenXpBar xpIntoLevel={xpInto} needed={xpNeeded} level={character.level} />
+                <p className="mt-2 text-center text-[10px] leading-relaxed text-muted-foreground/70 italic">
+                  XP is a token of commitment, not a measurement of intelligence,
+                  knowledge, health, or personal worth.
+                </p>
               </div>
 
               {/* mini stats */}
@@ -312,7 +368,7 @@ export default function Dashboard() {
                     </span>
                   </div>
                   <button
-                    onClick={() => handleComplete(todaysMission._id)}
+                    onClick={() => requestComplete(todaysMission._id)}
                     disabled={completingId !== null}
                     className="glow-violet mt-4 w-full rounded-xl bg-primary py-3 font-display text-base font-black uppercase tracking-widest text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-60"
                   >
@@ -460,7 +516,7 @@ export default function Dashboard() {
                         quest={q}
                         completing={completingId === q._id}
                         justCompleted={justCompletedIds.has(q._id)}
-                        onComplete={() => handleComplete(q._id)}
+                        onComplete={() => requestComplete(q._id)}
                         onDelete={() => handleDelete(q._id)}
                       />
                     ))}
@@ -479,6 +535,33 @@ export default function Dashboard() {
             >
               <AdventureLog entries={activity ?? undefined} />
             </motion.div>
+
+            {/* truthful mode setting */}
+            <motion.section
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.45 }}
+              aria-label="Settings"
+              className="surface-panel ring-edge rounded-xl p-4"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    <ShieldCheck className="size-4 text-primary" />
+                    Truthful completions
+                  </h2>
+                  <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                    Mettle trusts you to report your real progress. Rewards are tokens
+                    that encourage consistency, not proof of your worth.
+                  </p>
+                </div>
+                <Switch
+                  checked={truthfulModeEnabled}
+                  onCheckedChange={(v) => void setTruthfulModeSetting({ enabled: v })}
+                  aria-label="Enable truthful completions"
+                />
+              </div>
+            </motion.section>
           </div>
         </div>
       </main>
@@ -486,6 +569,13 @@ export default function Dashboard() {
       {/* overlays */}
       <RewardFloats reward={reward} onDone={() => setReward(null)} />
       <LevelUpModal data={levelUp} onClose={() => setLevelUp(null)} />
+      <TruthfulCompletionModal
+        quest={truthfulQuest}
+        stage={truthful?.stage ?? null}
+        completionId={truthful?.completionId ?? null}
+        onClose={() => setTruthful(null)}
+        onConfirm={handleTruthfulConfirm}
+      />
     </GameShell>
   );
 }

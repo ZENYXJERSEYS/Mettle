@@ -5,10 +5,36 @@ import {
   levelFromXp,
   levelUpReward,
   nextStreak,
+  reflectionPromptFor,
   titleForLevel,
   validateQuestInput,
+  validateReflection,
   xpForLevel,
 } from "../src/convex/gameRules";
+
+describe("Truthful completion", () => {
+  it("uses category-specific reflection prompts, resolved through the attribute map", () => {
+    expect(reflectionPromptFor("intellect")).toBe("What did you understand better?");
+    expect(reflectionPromptFor("studying")).toBe("What did you understand better?");
+    expect(reflectionPromptFor("coding")).toBe("What did you understand better?");
+    expect(reflectionPromptFor("reading")).toBe("What idea stayed with you?");
+    expect(reflectionPromptFor("fitness")).toBe("What did your body accomplish?");
+    expect(reflectionPromptFor("writing")).toBe("What did you create?");
+    expect(reflectionPromptFor("habits")).toBe("What difficult action did you follow through on?");
+  });
+
+  it("falls back to the generic prompt for unmapped categories", () => {
+    expect(reflectionPromptFor("nothing")).toBe("What did you actually gain from this quest?");
+  });
+
+  it("rejects empty and oversized reflections, accepts honest sentences", () => {
+    expect(validateReflection("   ").ok).toBe(false);
+    expect(validateReflection("x".repeat(281)).ok).toBe(false);
+    const ok = validateReflection("I finally understood derivatives.");
+    expect(ok.ok).toBe(true);
+    if (ok.ok) expect(ok.text).toBe("I finally understood derivatives.");
+  });
+});
 
 describe("XP curve", () => {
   it("matches floor(100 * level^1.5)", () => {

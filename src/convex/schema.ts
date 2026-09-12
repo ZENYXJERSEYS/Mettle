@@ -81,17 +81,23 @@ const schema = defineSchema(
       attrGain: v.number(),
       dayKey: v.string(),
       completedAt: v.number(),
+      // truthful-completion system
+      honest: v.optional(v.boolean()), // did the user confirm genuine completion
+      reflection: v.optional(v.string()), // one honest sentence, saved by the user
+      reflectedAt: v.optional(v.number()),
     })
     .index("by_quest", ["questId"])
     .index("by_user", ["userId"]),
 
     activityLog: defineTable({
       userId: v.id("users"),
-      kind: v.string(), // quest_created | quest_completed | level_up | milestone
+      kind: v.string(), // quest_created | quest_completed | level_up | milestone | purchase
       message: v.string(),
       icon: v.string(), // lucide icon name
       xp: v.optional(v.number()),
       gold: v.optional(v.number()),
+      completionId: v.optional(v.id("questCompletions")), // links honest completions to reflections
+      reflection: v.optional(v.string()), // one honest sentence, added after the fact
       dayKey: v.string(),
       createdAt: v.number(),
     })
@@ -130,6 +136,12 @@ const schema = defineSchema(
     })
       .index("by_user", ["userId"])
       .index("by_user_item", ["userId", "itemKey"]),
+
+    // Profile settings — one row per user, created lazily
+    userSettings: defineTable({
+      userId: v.id("users"),
+      truthfulMode: v.boolean(), // truthfulness prompt on completion; default true
+    }).index("by_user", ["userId"]),
   },
   {
     schemaValidation: false,

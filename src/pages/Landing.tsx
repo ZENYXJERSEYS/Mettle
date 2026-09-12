@@ -243,6 +243,26 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* ── product principle ── */}
+        <section className="border-t border-border/50 py-16">
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            className="surface-panel ring-edge mx-auto max-w-3xl rounded-2xl p-6 sm:p-8"
+          >
+            <h2 className="font-display text-center text-lg font-black tracking-[0.14em] text-primary/90">
+              BE TRUTHFUL TO YOURSELF
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-center text-sm leading-relaxed text-muted-foreground">
+              Mettle does not pretend XP equals knowledge. XP and Gold are small
+              tokens that make effort visible, create positive feedback, and
+              encourage users to keep going. The real reward is the skill,
+              discipline, health, understanding, or confidence gained in real life.
+            </p>
+          </motion.div>
+        </section>
+
         {/* ── final CTA ── */}
         <section className="border-t border-border/50 py-20 text-center">
           <motion.h2
@@ -253,6 +273,16 @@ export default function Landing() {
           >
             The work you do in real life is the progression system.
           </motion.h2>
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="mx-auto mt-4 max-w-lg text-sm italic text-muted-foreground"
+          >
+            Be truthful to yourself. Mettle can reward your commitment, but only
+            you know what you truly gained.
+          </motion.p>
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}

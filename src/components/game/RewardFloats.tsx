@@ -49,6 +49,16 @@ export default function RewardFloats({
           >
             +{reward.attrGain} {reward.attr}
           </motion.div>
+          <motion.div
+            key="token"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 1, 1, 1, 0] }}
+            transition={{ duration: 2.2, delay: 0.9, times: [0, 0.15, 0.65, 0.85, 1] }}
+            className="mt-1 text-center"
+          >
+            <div className="text-xs text-muted-foreground">A small token for showing up.</div>
+            <div className="text-xs font-semibold text-foreground/80">The real progress is yours.</div>
+          </motion.div>
         </div>
       )}
     </AnimatePresence>

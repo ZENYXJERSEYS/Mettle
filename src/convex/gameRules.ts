@@ -181,3 +181,29 @@ export function validateQuestInput(input: {
 export function dayKeyFromTimestamp(ts: number): string {
   return new Date(ts).toISOString().slice(0, 10);
 }
+
+// ── TRUTHFUL COMPLETION ─────────────────────────────────────────────────────
+// Category-specific reflection prompt shown after an honest completion.
+export const REFLECTION_PROMPTS: Record<string, string> = {
+  intellect: "What did you understand better?",
+  wisdom: "What idea stayed with you?",
+  strength: "What did your body accomplish?",
+  vitality: "What did your body accomplish?",
+  creativity: "What did you create?",
+  discipline: "What difficult action did you follow through on?",
+};
+
+export function reflectionPromptFor(category: string): string {
+  const attr = CATEGORY_TO_ATTR[category] ?? category;
+  return REFLECTION_PROMPTS[attr] ?? "What did you actually gain from this quest?";
+}
+
+export const MAX_REFLECTION_LEN = 280;
+
+export function validateReflection(text: string): { ok: true; text: string } | { ok: false; error: string } {
+  const t = (text ?? "").trim();
+  if (t.length === 0) return { ok: false, error: "Reflection cannot be empty." };
+  if (t.length > MAX_REFLECTION_LEN)
+    return { ok: false, error: `Reflection must be at most ${MAX_REFLECTION_LEN} characters.` };
+  return { ok: true, text: t };
+}
