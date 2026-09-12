@@ -1,9 +1,82 @@
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Float, Sparkles } from "@react-three/drei";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
 export type HeroState = "idle" | "pulse" | "levelup";
+
+/** Inline float: gentle vertical bob + sway (replaces drei's Float). */
+function FloatGroup({
+  children,
+  speed = 1.4,
+  bob = 0.12,
+  sway = 0.06,
+}: {
+  children: React.ReactNode;
+  speed?: number;
+  bob?: number;
+  sway?: number;
+}) {
+  const ref = useRef<THREE.Group>(null);
+  useFrame((s) => {
+    const g = ref.current;
+    if (!g) return;
+    const t = s.clock.elapsedTime * speed;
+    g.position.y = Math.sin(t) * bob;
+    g.rotation.x = Math.sin(t * 0.7) * sway;
+    g.rotation.z = Math.cos(t * 0.5) * sway;
+  });
+  return <group ref={ref}>{children}</group>;
+}
+
+/** Inline GPU particle dust (replaces drei's Sparkles). */
+function EnergyDust({
+  count,
+  color,
+  scale = 4.2,
+}: {
+  count: number;
+  color: string;
+  scale?: number;
+}) {
+  const points = useRef<THREE.Points>(null);
+  const positions = useMemo(() => {
+    const arr = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      // random point in a sphere-ish shell
+      const r = 1.2 + Math.random() * (scale / 2.4);
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      arr[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      arr[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      arr[i * 3 + 2] = r * Math.cos(phi);
+    }
+    return arr;
+  }, [count, scale]);
+
+  useFrame((s) => {
+    if (points.current) {
+      points.current.rotation.y = s.clock.elapsedTime * 0.08;
+      points.current.rotation.x = Math.sin(s.clock.elapsedTime * 0.15) * 0.1;
+    }
+  });
+
+  return (
+    <points ref={points}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+      </bufferGeometry>
+      <pointsMaterial
+        color={color}
+        size={0.045}
+        sizeAttenuation
+        transparent
+        opacity={0.55}
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </points>
+  );
+}
 
 interface CrystalProps {
   form: number; // 1..4 visual tier
@@ -173,7 +246,7 @@ function CoreCrystal({ form, level, state, tint }: CrystalProps) {
       <pointLight ref={burstLight} color={colors.core} intensity={0} distance={8} />
 
       {/* ambient energy dust */}
-      <Sparkles count={form * 18} scale={4.2} size={2.2} speed={0.35} color={colors.core} opacity={0.55} />
+      <EnergyDust count={form * 18} color={colors.core} scale={4.2} />
     </group>
   );
 }
@@ -190,9 +263,9 @@ export default function HeroCrystal({ form, level, state, tint }: CrystalProps) 
       <directionalLight position={[4, 6, 4]} intensity={1.1} color="#c4b5fd" />
       <pointLight position={[-4, -2, 2]} intensity={0.5} color="#7dd3fc" />
       <pointLight position={[3, 2, -3]} intensity={0.7} color="#a78bfa" />
-      <Float speed={1.4} rotationIntensity={0.25} floatIntensity={0.55}>
+      <FloatGroup speed={1.4} bob={0.12} sway={0.06}>
         <CoreCrystal form={form} level={level} state={state} tint={tint} />
-      </Float>
+      </FloatGroup>
     </Canvas>
   );
 }
