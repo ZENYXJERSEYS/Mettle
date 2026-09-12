@@ -3,7 +3,16 @@ import { Link, useLocation } from "react-router";
 import { useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "@/convex/_generated/api";
-import { Coins, Flame, Swords, Trophy, Backpack, LayoutDashboard, LogOut, Store } from "lucide-react";
+import {
+  Coins,
+  Flame,
+  Swords,
+  Trophy,
+  Backpack,
+  LayoutDashboard,
+  LogOut,
+  Store,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const NAV = [
@@ -24,7 +33,7 @@ export default function GameShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen pb-20 sm:pb-8">
+    <div className="min-h-screen pb-24 md:pb-8">
       <header className="sticky top-0 z-30 border-b border-border/40 bg-background/75 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-2.5 sm:px-8 sm:py-3">
           <div className="flex items-center gap-6">
@@ -32,11 +41,11 @@ export default function GameShell({ children }: { children: ReactNode }) {
               <div className="flex size-8 items-center justify-center rounded-lg bg-primary/15 ring-1 ring-primary/30">
                 <Swords className="size-4 text-primary" />
               </div>
-              <span className="font-display hidden text-base font-bold tracking-wide sm:block">
-                LIFE<span className="text-primary">RPG</span>
+              <span className="font-display text-base font-black tracking-[0.22em]">
+                METTLE
               </span>
             </Link>
-            <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
+            <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary">
               {NAV.map((n) => {
                 const active = location.pathname === n.to;
                 return (
@@ -81,26 +90,32 @@ export default function GameShell({ children }: { children: ReactNode }) {
             </Button>
           </div>
         </div>
-        {/* mobile nav */}
-        <nav className="flex items-center justify-around border-t border-border/30 md:hidden" aria-label="Primary mobile">
+      </header>
+      {children}
+      {/* fixed mobile bottom nav — large touch targets */}
+      <nav
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-border/50 bg-background/90 backdrop-blur-md md:hidden"
+        aria-label="Primary mobile"
+      >
+        <div className="mx-auto grid w-full max-w-md grid-cols-4">
           {NAV.map((n) => {
             const active = location.pathname === n.to;
             return (
               <Link
                 key={n.to}
                 to={n.to}
-                className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold ${
+                className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-[10px] font-bold uppercase tracking-wider transition-colors ${
                   active ? "text-primary" : "text-muted-foreground"
                 }`}
+                aria-current={active ? "page" : undefined}
               >
-                <n.icon className="size-4.5" />
+                <n.icon className="size-5" />
                 {n.label}
               </Link>
             );
           })}
-        </nav>
-      </header>
-      {children}
+        </div>
+      </nav>
     </div>
   );
 }

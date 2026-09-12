@@ -50,12 +50,27 @@ export default function Dashboard() {
   const character = useQuery(api.characters.getMyCharacter) as Character | null | undefined;
   const quests = useQuery(api.quests.listMyQuests);
   const activity = useQuery(api.activityLog.listMyActivity, { limit: 30 });
-  const equipped = useQuery(api.shop.getMyEquipped) as
-    | { key: string; name: string; tint: string; rarity: string }
+  const equippedByCategory = useQuery(api.shop.getMyEquipped) as
+    | Record<
+        string,
+        {
+          key: string;
+          name: string;
+          tint: string;
+          rarity: string;
+          category: string;
+          titleGrant?: string;
+        }
+      >
     | null
     | undefined;
   const board = useQuery(api.leaderboard.getLeaderboard) as
-    | { myRank: number | null; total: number }
+    | {
+        myRank: number | null;
+        total: number;
+        myXp: number | null;
+        nextRankXp: number | null;
+      }
     | null
     | undefined;
   const createCharacter = useMutation(api.characters.createCharacter);
@@ -190,13 +205,18 @@ export default function Dashboard() {
                     {character.name}
                   </h1>
                   <div className="text-gradient-violet font-display text-sm font-bold tracking-wide">
-                    {character.title}
+                    {equippedByCategory?.title?.titleGrant ?? character.title}
                   </div>
-                  {equipped && (
-                    <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest"
-                      style={{ background: `${equipped.tint}1f`, color: equipped.tint }}>
+                  {equippedByCategory && (
+                    <div
+                      className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest"
+                      style={{
+                        background: `${(equippedByCategory.aura ?? equippedByCategory.frame)?.tint ?? "#a78bfa"}1f`,
+                        color: (equippedByCategory.aura ?? equippedByCategory.frame)?.tint ?? "#a78bfa",
+                      }}
+                    >
                       <Sparkles className="size-3" />
-                      {equipped.name}
+                      {(equippedByCategory.aura ?? equippedByCategory.frame)?.name}
                     </div>
                   )}
                 </div>
@@ -210,13 +230,13 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* 3D hero — tinted by equipped loot */}
+              {/* 3D hero — tinted by equipped aura; title override applied in identity block */}
               <div className="relative mx-auto h-64 w-full max-w-80 sm:h-72">
                 <HeroStage
                   form={character.form}
                   level={character.level}
                   state={heroState}
-                  tint={equipped?.tint ?? null}
+                  tint={equippedByCategory?.aura?.tint ?? null}
                 />
               </div>
 
@@ -416,12 +436,20 @@ export default function Dashboard() {
                   ))}
                 </div>
               ) : (quests ?? []).length === 0 ? (
-                <div className="surface-quest ring-edge flex flex-col items-center gap-2 rounded-xl py-10 text-center">
-                  <Swords className="size-7 text-muted-foreground/40" />
-                  <p className="text-sm font-medium">No quests yet</p>
-                  <p className="max-w-xs text-xs text-muted-foreground">
-                    Accept your first real-world quest above. Completing it earns XP, Gold, and attributes.
+                <div className="surface-quest ring-edge flex flex-col items-center gap-3 rounded-xl py-12 text-center">
+                  <Swords className="size-8 text-muted-foreground/40" />
+                  <h3 className="font-display text-base font-black tracking-widest">
+                    THE QUEST BOARD IS SILENT
+                  </h3>
+                  <p className="max-w-xs text-sm text-muted-foreground">
+                    Every legend begins with one mission.
                   </p>
+                  <button
+                    onClick={() => document.getElementById("quest-input")?.focus()}
+                    className="glow-violet mt-1 rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition-transform active:scale-95"
+                  >
+                    CREATE YOUR FIRST QUEST
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-2">

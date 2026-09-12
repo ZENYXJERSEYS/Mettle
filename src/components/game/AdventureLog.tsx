@@ -84,9 +84,11 @@ export default function AdventureLog({
       {entries.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-8 text-center">
           <Sparkles className="size-6 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">Your legend starts here.</p>
-          <p className="text-xs text-muted-foreground/60">
-            Complete your first quest to begin the chronicle.
+          <h3 className="font-display text-sm font-black tracking-widest">
+            YOUR CHRONICLE HAS NOT BEGUN
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            Complete a real-world quest to write your first entry.
           </p>
         </div>
       ) : (

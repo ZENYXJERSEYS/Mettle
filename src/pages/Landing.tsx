@@ -67,8 +67,8 @@ export default function Landing() {
             <div className="flex size-9 items-center justify-center rounded-lg bg-primary/15 ring-1 ring-primary/30">
               <Swords className="size-4.5 text-primary" />
             </div>
-            <span className="font-display text-lg font-bold tracking-wide">
-              LIFE<span className="text-primary">RPG</span>
+            <span className="font-display text-lg font-black tracking-[0.24em]">
+              METTLE
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -116,7 +116,16 @@ export default function Landing() {
             initial="hidden"
             animate="show"
             custom={2}
-            className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg"
+            className="mt-4 font-display text-sm font-bold tracking-[0.3em] text-primary/90 uppercase"
+          >
+            The RPG for Real Life
+          </motion.p>
+          <motion.p
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            custom={3}
+            className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg"
           >
             Log real-world quests — studying, training, reading, building — and
             watch your character earn XP, Gold, and attributes. Persistence is
@@ -127,13 +136,13 @@ export default function Landing() {
             variants={fadeUp}
             initial="hidden"
             animate="show"
-            custom={3}
+            custom={4}
             className="mt-9 flex flex-col items-center gap-3 sm:flex-row"
           >
             <Link to="/auth">
-              <Button size="lg" className="glow-violet h-12 px-8 text-base font-semibold">
-                Create your character
-                <ArrowRight className="size-4.5" />
+              <Button size="lg" className="glow-violet h-14 px-10 text-lg font-bold tracking-wide">
+                Enter the World
+                <ArrowRight className="size-5" />
               </Button>
             </Link>
             <Link to="/auth">
@@ -153,7 +162,7 @@ export default function Landing() {
             variants={fadeUp}
             initial="hidden"
             animate="show"
-            custom={4}
+            custom={5}
             className="mt-16 grid w-full max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4"
           >
             {[
@@ -175,6 +184,42 @@ export default function Landing() {
               </motion.div>
             ))}
           </motion.div>
+        </section>
+
+        {/* ── how it works ── */}
+        <section className="border-t border-border/50 py-16">
+          <motion.h2
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            className="font-display mb-3 text-center text-2xl font-bold sm:text-3xl"
+          >
+            How it works
+          </motion.h2>
+          <div className="mx-auto mt-10 grid max-w-4xl gap-3 sm:grid-cols-4">
+            {[
+              { n: "01", icon: Swords, t: "Choose a quest", d: "Pick a real-world goal — study, train, read, build." },
+              { n: "02", icon: Zap, t: "Do the real activity", d: "The work happens in your life, not on a screen." },
+              { n: "03", icon: Trophy, t: "Earn XP and Gold", d: "The server verifies and calculates every reward." },
+              { n: "04", icon: Flame, t: "Improve your character", d: "Level up, gain attributes, evolve your crystal." },
+            ].map((s, i) => (
+              <motion.div
+                key={s.n}
+                initial={{ opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.09, duration: 0.45 }}
+                className="surface-quest ring-edge relative rounded-xl p-5"
+              >
+                <span className="font-display absolute top-3 right-4 text-2xl font-black text-foreground/10">
+                  {s.n}
+                </span>
+                <s.icon className="mb-3 size-5 text-primary" />
+                <div className="text-sm font-bold">{s.t}</div>
+                <div className="mt-1 text-xs leading-relaxed text-muted-foreground">{s.d}</div>
+              </motion.div>
+            ))}
+          </div>
         </section>
 
         {/* ── material showcase ── */}
@@ -303,7 +348,7 @@ export default function Landing() {
         </section>
 
         <footer className="border-t border-border/40 py-8 text-center text-xs text-muted-foreground">
-          Life RPG — a hackathon build. Real backend, real persistence, real rewards.
+          METTLE — The RPG for Real Life. Real backend, real persistence, real rewards.
         </footer>
       </div>
     </motion.div>

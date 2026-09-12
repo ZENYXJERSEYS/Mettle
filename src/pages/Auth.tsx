@@ -123,16 +123,18 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               <div className="flex justify-center">
                     <img
                       src={logo}
-                      alt="Lock Icon"
+                      alt="Mettle logo"
                       width={64}
                       height={64}
                       className="rounded-lg mb-4 mt-4 cursor-pointer"
                       onClick={() => navigate("/")}
                     />
                   </div>
-                <CardTitle className="text-xl">Get Started</CardTitle>
+                <CardTitle className="font-display text-2xl font-black tracking-[0.28em] text-foreground">
+                  METTLE
+                </CardTitle>
                 <CardDescription>
-                  Enter your email to log in or sign up
+                  The RPG for Real Life — enter your email to begin your legend
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleEmailSubmit}>

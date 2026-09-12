@@ -1,8 +1,8 @@
-# Life RPG
+# METTLE
 
-**Your life is the progression system.**
+**The RPG for Real Life.**
 
-Log real-world activities — studying, training, reading, building — as quests. Complete them in real life, mark them complete in the app, and watch your character earn server-verified XP, Gold, attributes, and levels. When you improve your real life, your character visibly improves too.
+METTLE turns real-world activities into RPG quests. Complete them in real life, mark them complete in the app, and watch your character earn server-verified XP, Gold, attributes, and levels. When you improve your real life, your character visibly improves too.
 
 ---
 

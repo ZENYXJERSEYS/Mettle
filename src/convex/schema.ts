@@ -114,9 +114,11 @@ const schema = defineSchema(
       name: v.string(),
       description: v.string(),
       price: v.number(),
-      rarity: v.string(), // common | rare | epic | legendary
-      tint: v.string(), // hex color applied to the 3D hero
+      rarity: v.string(), // common | uncommon | rare | epic | legendary
+      category: v.string(), // avatar | aura | frame | title | effect
+      tint: v.string(), // hex color applied to the 3D hero / UI chrome
       icon: v.string(), // lucide icon name
+      titleGrant: v.optional(v.string()), // display title granted when equipped
     }).index("by_key", ["key"]),
 
     // One row per owned item per user

@@ -10,7 +10,21 @@ import {
   titleForLevel,
 } from "./gameRules";
 
-const DEFAULT_NAME = "Wanderer";
+// Distinct hero names so the leaderboard never fills with duplicate Wanderers.
+const NAME_POOL = [
+  "Auren", "Kael", "Seraphel", "Dren", "Lyra", "Thane", "Vesper", "Ilyra",
+  "Marek", "Solenne", "Orrin", "Nyx", "Calder", "Elara", "Rune", "Sable",
+  "Talon", "Wren", "Zephyr", "Isolde", "Kairo", "Meris", "Fenn", "Astra",
+];
+
+/** Deterministic pick from the pool — different users get different default names. */
+function defaultNameFor(userId: string): string {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = (hash * 31 + userId.charCodeAt(i)) | 0;
+  }
+  return NAME_POOL[Math.abs(hash) % NAME_POOL.length];
+}
 
 export interface LevelUpInfo {
   level: number;
@@ -57,7 +71,7 @@ export const createCharacter = mutation({
       .first();
     if (existing) return existing._id;
     const rawName = (args.name ?? "").trim();
-    const name = rawName.slice(0, 20) || DEFAULT_NAME;
+    const name = rawName.slice(0, 20) || defaultNameFor(userId);
     const now = Date.now();
     return await ctx.db.insert("characters", {
       userId,
