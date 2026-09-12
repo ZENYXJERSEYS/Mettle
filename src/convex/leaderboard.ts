@@ -31,6 +31,22 @@ function distinctName(
   return cleaned || `Wanderer-${String(idx + 1).padStart(2, "0")}`;
 }
 
+/** Public aggregate stats for the landing page — real DB numbers, no auth needed. */
+export const getPublicStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const chars = await ctx.db.query("characters").collect();
+    const completions = await ctx.db.query("questCompletions").collect();
+
+    const heroes = chars.filter((c) => c.onboardingComplete === true).length;
+    const honestCompletions = completions.filter((c) => c.honest === true);
+    const totalXp = honestCompletions.reduce((sum, c) => sum + c.xp, 0);
+    const longestStreak = chars.reduce((max, c) => Math.max(max, c.longestStreak ?? c.streak ?? 0), 0);
+
+    return { heroes, honestCompletions: honestCompletions.length, totalXp, longestStreak };
+  },
+});
+
 /** Leaderboard: returns lifetime (total XP) and weekly (7d XP) rankings + my gap to next rank. */
 export const getLeaderboard = query({
   args: {},
