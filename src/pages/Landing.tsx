@@ -22,11 +22,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ShowcaseSection } from "@/components/ShowcaseCarousel";
 import HeroStage from "@/components/hero/HeroStage";
-import MoltenXpBar from "@/components/game/MoltenXpBar";  const stats = useQuery(api.leaderboard.getPublicStats) as
-    | { heroes: number; honestCompletions: number; totalXp: number; longestStreak: number }
-    | undefined;
+import MoltenXpBar from "@/components/game/MoltenXpBar";
 
-  const fadeUp = {
+const fadeUp = {
   hidden: { opacity: 0, y: 24 },
   show: (i: number) => ({
     opacity: 1,
@@ -385,6 +383,10 @@ function LoopPreview() {
 }
 
 export default function Landing() {
+  const stats = useQuery(api.leaderboard.getPublicStats) as
+    | { heroes: number; honestCompletions: number; totalXp: number; longestStreak: number }
+    | undefined;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
