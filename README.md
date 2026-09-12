@@ -1,4 +1,4 @@
-# ⚔️ Life RPG
+# Life RPG
 
 **Your life is the progression system.**
 
@@ -77,9 +77,11 @@ No secrets are committed. In this managed environment both values are injected a
 3. Point out the character: name, title, level, Gold, streak, molten XP bar, six attribute gauges, and the 3D crystal hero.
 4. Accept the quest **"Study calculus for 25 minutes"** (Intellect · Medium).
 5. Complete it — watch the staged sequence: card resolves → hero pulses → **+50 XP / +20 Gold / +2 Intellect** float up in layers → XP bar sweeps → streak/log update.
-6. Click **"+120 XP (demo)"** on the hero panel to cross the next level threshold — the full 3-second level-up transformation plays: rings gather, the crystal cracks open, the new level lands with a spring, and the Gold/attribute/title rewards reveal.
-7. Refresh the page — everything persists (server state, not localStorage).
-8. Close with: *"The work you do in real life is the progression system."*
+6. Press **Ctrl+Alt+D** (hidden demo fixture, server-capped) to cross the next level threshold — the full 3-second level-up transformation plays: rings gather, the crystal cracks open, the new level lands with a spring, and the Gold/attribute/title rewards reveal.
+7. Open the **Shop**, buy Ember Halo with earned Gold, then **Equip** it from **Inventory** — the crystal's energy tint changes instantly and persists.
+8. Open the **Leaderboard** — your hero is ranked by lifetime XP against all characters.
+9. Refresh the page — everything persists (server state, not localStorage).
+10. Close with: *"The work you do in real life is the progression system."*
 
 ## Security Model
 
@@ -100,30 +102,35 @@ No secrets are committed. In this managed environment both values are injected a
 
 ## Completed Features
 
-- ✅ Public landing page with product thesis and core-loop explainer
-- ✅ Email OTP + anonymous guest auth with protected routes
-- ✅ Persistent character: level, XP, Gold, streak, 6 attributes, titles, crystal form
-- ✅ Quest create/complete/delete with server-calculated rewards
-- ✅ Atomic, idempotent completion transaction with ownership checks
-- ✅ Adventure Log with real event history
-- ✅ Molten-metal XP bar, attribute instrument panels, reward float choreography
-- ✅ 3D crystal hero (R3F): idle breathing, pointer parallax, completion pulse, level-up transformation
-- ✅ Staged, skippable, replay-safe level-up modal driven by the actual server response
-- ✅ WebGL-unavailable and prefers-reduced-motion fallbacks
-- ✅ Responsive desktop + mobile layouts with bottom navigation
-- ✅ Loading skeletons, empty states, error toasts, disabled states
-- ✅ Progression test suite
+- Public landing page with product thesis and core-loop explainer
+- Email OTP + anonymous guest auth with protected routes
+- Persistent character: level, XP, Gold, streak, 6 attributes, titles, crystal form
+- Quest create/complete/delete with server-calculated rewards
+- Atomic, idempotent completion transaction with ownership checks
+- Adventure Log with real event history
+- Molten-metal XP bar, attribute instrument panels, reward float choreography
+- 3D crystal hero (R3F): idle breathing, pointer parallax, completion pulse, level-up transformation
+- Equipped loot tints the 3D hero's energy in real time
+- Shop: seeded catalog, transactional purchases (Gold can never go negative), rarity tiers
+- Inventory: equip/unequip with persistence across sessions
+- Leaderboard: global XP ranking with your live position
+- Staged, skippable, replay-safe level-up modal driven by the actual server response
+- WebGL-unavailable and prefers-reduced-motion fallbacks
+- Responsive desktop + mobile layouts with navigation
+- Branded animated loading states (never a blank screen)
+- Loading skeletons, empty states, error toasts, disabled states
+- Progression test suite
 
 ## Deferred (v2 candidates)
 
-- Shop with purchasable cosmetics and inventory/equip system
 - Quest editing and recurring-quest scheduling
 - Achievements/milestones beyond level titles
-- Additional crystal forms and equipped-item visuals on the 3D hero
+- Additional crystal forms, loot meshes, and rarity visuals on the 3D hero
+- Weekly leaderboard seasons and per-attribute rankings
 - Social features and deep analytics
 
 ## Known Limitations
 
 - Streak day keys use UTC (a run at 11 PM local may count for the next day in UTC+ zones)
 - Level-up rewards grant attribute points as a flat +1 rather than spendable pools
-- The "+120 XP (demo)" button is a dev fixture for demos, capped server-side at 2000 XP per grant
+- The demo XP fixture is a hidden keyboard shortcut (Ctrl+Alt+D), not a visible UI control; it routes through the production mutation and is capped server-side at 2000 XP per grant

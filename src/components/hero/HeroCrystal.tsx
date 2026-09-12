@@ -9,6 +9,7 @@ interface CrystalProps {
   form: number; // 1..4 visual tier
   level: number;
   state: HeroState;
+  tint?: string | null; // equipped loot hex override
 }
 
 const FORM_COLORS: Record<number, { shell: string; core: string; rim: string }> = {
@@ -18,7 +19,7 @@ const FORM_COLORS: Record<number, { shell: string; core: string; rim: string }> 
   4: { shell: "#f0abfc", core: "#fde68a", rim: "#f5d0fe" },
 };
 
-function CoreCrystal({ form, level, state }: CrystalProps) {
+function CoreCrystal({ form, level, state, tint }: CrystalProps) {
   const group = useRef<THREE.Group>(null);
   const shell = useRef<THREE.Mesh>(null);
   const inner = useRef<THREE.Mesh>(null);
@@ -26,7 +27,8 @@ function CoreCrystal({ form, level, state }: CrystalProps) {
   const burstLight = useRef<THREE.PointLight>(null);
   const phase = useRef<{ t: number; active: string }>({ t: 0, active: state });
 
-  const colors = FORM_COLORS[Math.min(4, Math.max(1, form))];
+  const base = FORM_COLORS[Math.min(4, Math.max(1, form))];
+  const colors = tint ? { shell: tint, core: tint, rim: tint } : base;
   const ringCount = useMemo(() => Math.min(1 + form, 4), [form]);
 
   // Reset phase when state changes (replay-safe)
@@ -176,7 +178,7 @@ function CoreCrystal({ form, level, state }: CrystalProps) {
   );
 }
 
-export default function HeroCrystal({ form, level, state }: CrystalProps) {
+export default function HeroCrystal({ form, level, state, tint }: CrystalProps) {
   return (
     <Canvas
       dpr={[1, 1.75]}
@@ -189,7 +191,7 @@ export default function HeroCrystal({ form, level, state }: CrystalProps) {
       <pointLight position={[-4, -2, 2]} intensity={0.5} color="#7dd3fc" />
       <pointLight position={[3, 2, -3]} intensity={0.7} color="#a78bfa" />
       <Float speed={1.4} rotationIntensity={0.25} floatIntensity={0.55}>
-        <CoreCrystal form={form} level={level} state={state} />
+        <CoreCrystal form={form} level={level} state={state} tint={tint} />
       </Float>
     </Canvas>
   );

@@ -36,8 +36,8 @@ const FALLBACK_COLORS: Record<number, string> = {
 };
 
 /** Static CSS fallback mirroring the crystal's identity. */
-function CrystalFallback({ form, state }: { form: number; state: HeroState }) {
-  const color = FALLBACK_COLORS[Math.min(4, Math.max(1, form))];
+function CrystalFallback({ form, state, tint }: { form: number; state: HeroState; tint?: string | null }) {
+  const color = tint ?? FALLBACK_COLORS[Math.min(4, Math.max(1, form))];
   const glow =
     state === "levelup" ? 0.9 : state === "pulse" ? 0.65 : 0.35;
   return (
@@ -71,11 +71,13 @@ export default function HeroStage({
   form,
   level,
   state,
+  tint,
   className,
 }: {
   form: number;
   level: number;
   state: HeroState;
+  tint?: string | null;
   className?: string;
 }) {
   const reduced = useReducedMotion();
@@ -86,7 +88,7 @@ export default function HeroStage({
     <div className={`relative ${className ?? ""}`}>
       {canRender3D ? (
         <Suspense fallback={<CrystalFallback form={form} state="idle" />}>
-          <HeroCrystal form={form} level={level} state={state} />
+          <HeroCrystal form={form} level={level} state={state} tint={tint} />
         </Suspense>
       ) : (
         <CrystalFallback form={form} state={reduced ? "idle" : state} />

@@ -107,6 +107,27 @@ const schema = defineSchema(
     })
       .index("by_user", ["userId"])
       .index("by_user_attr", ["userId", "attr"]),
+
+    // Shop catalog — seeded once, idempotent
+    shopItems: defineTable({
+      key: v.string(), // stable catalog key, e.g. "ember_halo"
+      name: v.string(),
+      description: v.string(),
+      price: v.number(),
+      rarity: v.string(), // common | rare | epic | legendary
+      tint: v.string(), // hex color applied to the 3D hero
+      icon: v.string(), // lucide icon name
+    }).index("by_key", ["key"]),
+
+    // One row per owned item per user
+    inventory: defineTable({
+      userId: v.id("users"),
+      itemKey: v.string(),
+      equipped: v.boolean(),
+      purchasedAt: v.number(),
+    })
+      .index("by_user", ["userId"])
+      .index("by_user_item", ["userId", "itemKey"]),
   },
   {
     schemaValidation: false,

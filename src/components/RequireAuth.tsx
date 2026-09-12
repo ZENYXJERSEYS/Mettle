@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
-import { Loader2 } from "lucide-react";
+import BrandedLoading from "@/components/BrandedLoading";
 import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router";
 
@@ -8,11 +8,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const location = useLocation();
 
   if (isLoading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
-      </main>
-    );
+    return <BrandedLoading />;
   }
 
   if (!isAuthenticated) {

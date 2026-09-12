@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMutation, useQuery } from "convex/react";
-import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
-import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import GameShell from "@/components/GameShell";
 import HeroStage from "@/components/hero/HeroStage";
 import MoltenXpBar from "@/components/game/MoltenXpBar";
 import AttributePanel from "@/components/game/AttributePanel";
@@ -13,19 +13,18 @@ import NewQuestComposer from "@/components/game/NewQuestComposer";
 import AdventureLog from "@/components/game/AdventureLog";
 import LevelUpModal, { type LevelUpData } from "@/components/game/LevelUpModal";
 import RewardFloats, { type RewardPayload } from "@/components/game/RewardFloats";
-import {
-  levelFromXp,
-  titleForLevel,
-  CATEGORY_META,
-} from "@/convex/gameRules";
+import { levelFromXp, titleForLevel, CATEGORY_META } from "@/convex/gameRules";
 import {
   Coins,
   Flame,
+  Gift,
   Loader2,
-  LogOut,
   Sparkles,
   Swords,
+  Trophy,
   Zap,
+  Crown,
+  type LucideIcon,
 } from "lucide-react";
 
 type HeroState = "idle" | "pulse" | "levelup";
@@ -48,10 +47,17 @@ interface Character {
 }
 
 export default function Dashboard() {
-  const { user, signOut } = useAuth();
   const character = useQuery(api.characters.getMyCharacter) as Character | null | undefined;
   const quests = useQuery(api.quests.listMyQuests);
   const activity = useQuery(api.activityLog.listMyActivity, { limit: 30 });
+  const equipped = useQuery(api.shop.getMyEquipped) as
+    | { key: string; name: string; tint: string; rarity: string }
+    | null
+    | undefined;
+  const board = useQuery(api.leaderboard.getLeaderboard) as
+    | { myRank: number | null; total: number }
+    | null
+    | undefined;
   const createCharacter = useMutation(api.characters.createCharacter);
   const completeQuest = useMutation(api.quests.completeQuest);
   const deleteQuest = useMutation(api.quests.deleteQuest);
@@ -59,10 +65,10 @@ export default function Dashboard() {
 
   // ensure character exists once authed
   useEffect(() => {
-    if (user && character === null) {
+    if (character === null) {
       void createCharacter({});
     }
-  }, [user, character, createCharacter]);
+  }, [character, createCharacter]);
 
   const [heroState, setHeroState] = useState<HeroState>("idle");
   const [completingId, setCompletingId] = useState<string | null>(null);
@@ -73,33 +79,32 @@ export default function Dashboard() {
 
   const lvl = character ? levelFromXp(character.xp) : null;
 
-  // recommended quest: first active, prefer epic>hard>medium>easy
   const difficultyOrder: Record<string, number> = { epic: 0, hard: 1, medium: 2, easy: 3 };
-  const nextQuest = useMemo(() => {
-    if (!quests) return null;
-    const active = quests.filter((q) => q.status === "active");
-    if (active.length === 0) return null;
-    return [...active].sort((a, b) => difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty])[0];
-  }, [quests]);
+  const activeQuests = useMemo(
+    () => (quests ?? []).filter((q) => q.status === "active"),
+    [quests],
+  );
+  // Today's Mission = highest-difficulty active quest
+  const todaysMission = useMemo(() => {
+    if (activeQuests.length === 0) return null;
+    return [...activeQuests].sort(
+      (a, b) => difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty],
+    )[0];
+  }, [activeQuests]);
 
   const handleComplete = async (questId: string) => {
     if (completingId) return; // lock against duplicate clicks
     setCompletingId(questId);
     try {
       const result = await completeQuest({ questId: questId as never });
-      if (result.alreadyCompleted) {
-        // idempotent retry — no fabricated rewards
-        return;
-      }
+      if (result.alreadyCompleted) return; // idempotent retry — no fabricated rewards
       const r = result.reward!;
       setJustCompletedIds((s) => new Set(s).add(questId));
       setReward({ xp: r.xp, gold: r.gold, attr: r.attr, attrGain: r.attrGain });
       setHotAttr(r.attr);
       setHeroState("pulse");
       if (result.levelUp) {
-        setTimeout(() => {
-          setLevelUp(result.levelUp!);
-        }, 1400);
+        setTimeout(() => setLevelUp(result.levelUp!), 1400);
       }
       setTimeout(() => setHeroState("idle"), 1250);
       setTimeout(() => setHotAttr(null), 2200);
@@ -124,74 +129,51 @@ export default function Dashboard() {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    window.location.href = "/";
-  };
-
-  const handleGrantXp = async () => {
-    try {
-      const res = await grantXp({ amount: 120 });
-      if (res.leveledUp && res.levelUp) {
-        setHeroState("levelup");
-        setLevelUp(res.levelUp);
-        setTimeout(() => setHeroState("idle"), 2700);
-      } else {
-        toast.success("Gained 120 XP");
+  // Hidden demo fixture: Ctrl+Alt+D — grants 120 XP through the real server mutation.
+  // Not rendered anywhere in the UI.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.altKey && (e.key === "d" || e.key === "D")) {
+        e.preventDefault();
+        void (async () => {
+          try {
+            const res = await grantXp({ amount: 120 });
+            if (res.leveledUp && res.levelUp) {
+              setHeroState("levelup");
+              setLevelUp(res.levelUp);
+              setTimeout(() => setHeroState("idle"), 2700);
+            } else {
+              toast.success("Gained 120 XP");
+            }
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Failed");
+          }
+        })();
       }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed");
-    }
-  };
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [grantXp]);
 
-  if (character === undefined || (user && character === null)) {
-    return (
-      <main className="flex min-h-screen items-center justify-center">
-        <Loader2 className="size-7 animate-spin text-muted-foreground" />
-      </main>
-    );
+  if (character === undefined) {
+    return <GameShell><main className="flex min-h-[60vh] items-center justify-center"><Loader2 className="size-7 animate-spin text-muted-foreground" /></main></GameShell>;
   }
-
   if (!character) return null;
 
   const xpNeeded = lvl?.nextLevelXp ?? 100;
-  const completedToday = quests?.filter(
-    (q) => q.status === "completed" && q.completedAt && Date.now() - q.completedAt < 86400000
-  ).length ?? 0;
+  const xpInto = lvl?.xpIntoLevel ?? 0;
+  const xpRemaining = Math.max(0, xpNeeded - xpInto);
+  const activeCount = activeQuests.length;
+  const completedCount = (quests ?? []).filter((q) => q.status === "completed").length;
+  // streak milestones: next badge at 7 / 14 / 30
+  const milestone = character.streak >= 30 ? null : character.streak >= 14 ? 30 : character.streak >= 7 ? 14 : 7;
 
   return (
-    <div className="min-h-screen pb-24 sm:pb-10">
-      {/* ── top bar ── */}
-      <header className="sticky top-0 z-30 border-b border-border/40 bg-background/70 backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-3 sm:px-8">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/15 ring-1 ring-primary/30">
-              <Swords className="size-4 text-primary" />
-            </div>
-            <span className="font-display hidden text-base font-bold tracking-wide sm:block">
-              LIFE<span className="text-primary">RPG</span>
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span aria-label="Gold" className="glow-gold flex items-center gap-1.5 rounded-full bg-gold/10 px-3 py-1.5 font-mono text-sm font-bold text-gold">
-              <Coins className="size-4" />
-              {character.gold.toLocaleString()}
-            </span>
-            <span aria-label="Streak" className="flex items-center gap-1.5 rounded-full bg-secondary/60 px-3 py-1.5 font-mono text-sm font-bold text-foreground/90" title="Daily streak — complete a quest today to keep it">
-              <Flame className="size-4 text-gold" />
-              {character.streak}
-            </span>
-            <Button variant="ghost" size="icon" onClick={handleSignOut} aria-label="Sign out" className="text-muted-foreground">
-              <LogOut className="size-4" />
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-6xl px-5 py-6 sm:px-8">
+    <GameShell>
+      <main className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-8 sm:py-6">
         <div className="grid gap-5 lg:grid-cols-12">
           {/* ══ LEFT: hero command stage ══ */}
-          <section id="character" className="scroll-mt-20 lg:col-span-5" aria-label="Character">
+          <section id="character" className="scroll-mt-24 lg:col-span-5" aria-label="Character">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -210,9 +192,16 @@ export default function Dashboard() {
                   <div className="text-gradient-violet font-display text-sm font-bold tracking-wide">
                     {character.title}
                   </div>
+                  {equipped && (
+                    <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest"
+                      style={{ background: `${equipped.tint}1f`, color: equipped.tint }}>
+                      <Sparkles className="size-3" />
+                      {equipped.name}
+                    </div>
+                  )}
                 </div>
                 <div className="text-right">
-                  <div className="font-display text-5xl font-black leading-none text-gradient-gold">
+                  <div className="font-display text-gradient-gold text-6xl font-black leading-none">
                     {character.level}
                   </div>
                   <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/70">
@@ -221,123 +210,204 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* 3D hero */}
-              <div className="relative mx-auto h-56 w-full max-w-72 sm:h-64">
-                <HeroStage form={character.form} level={character.level} state={heroState} />
+              {/* 3D hero — tinted by equipped loot */}
+              <div className="relative mx-auto h-64 w-full max-w-80 sm:h-72">
+                <HeroStage
+                  form={character.form}
+                  level={character.level}
+                  state={heroState}
+                  tint={equipped?.tint ?? null}
+                />
               </div>
 
               {/* XP */}
               <div className="relative z-10">
-                <MoltenXpBar
-                  xpIntoLevel={lvl?.xpIntoLevel ?? 0}
-                  needed={xpNeeded}
-                  level={character.level}
-                />
+                <MoltenXpBar xpIntoLevel={xpInto} needed={xpNeeded} level={character.level} />
               </div>
 
               {/* mini stats */}
               <div className="relative z-10 mt-4 grid grid-cols-3 gap-2 text-center">
                 <div className="rounded-lg bg-secondary/40 py-2">
-                  <div className="font-mono text-lg font-bold">{completedToday}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Today</div>
+                  <div className="font-mono text-lg font-bold">{activeCount}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Active</div>
+                </div>
+                <div className="rounded-lg bg-secondary/40 py-2">
+                  <div className="font-mono text-lg font-bold">{completedCount}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Done</div>
                 </div>
                 <div className="rounded-lg bg-secondary/40 py-2">
                   <div className="font-mono text-lg font-bold">{character.streak}</div>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Streak</div>
                 </div>
-                <div className="rounded-lg bg-secondary/40 py-2">
-                  <div className="font-mono text-lg font-bold">{quests?.filter((q) => q.status === "active").length ?? 0}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Active</div>
-                </div>
               </div>
+            </motion.div>
 
-              {/* dev fixture (demo level-up trigger) */}
-              <button
-                onClick={handleGrantXp}
-                className="relative z-10 mt-3 w-full rounded-lg border border-dashed border-primary/30 bg-primary/5 py-1.5 text-[11px] font-semibold text-primary/70 transition hover:bg-primary/10"
-                title="Development fixture: grants 120 XP to demo the level-up sequence"
-              >
-                <Zap className="mr-1 inline size-3" />
-                +120 XP (demo)
-              </button>
+            {/* attributes */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.12, duration: 0.45 }}
+              className="surface-panel ring-edge mt-4 rounded-2xl p-4"
+              aria-label="Attributes"
+            >
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                Attributes
+              </h2>
+              <AttributePanel character={character} highlightAttr={hotAttr} highlightGain={reward?.attrGain} />
             </motion.div>
           </section>
 
-          {/* ══ RIGHT: quests + log ══ */}
+          {/* ══ RIGHT: mission + quests + previews ══ */}
           <div className="flex flex-col gap-5 lg:col-span-7">
-            {/* next quest — privileged */}
-            {nextQuest && (
+            {/* TODAY'S MISSION — privileged */}
+            {todaysMission ? (
               <motion.section
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1, duration: 0.45 }}
-                aria-label="Next quest"
-                className="ring-edge relative overflow-hidden rounded-2xl p-[1px]"
-                style={{ background: `linear-gradient(120deg, oklch(from var(--attr-${nextQuest.category}) 60% c h / 55%), oklch(0.68 0.19 295 / 40%))` }}
+                transition={{ delay: 0.08, duration: 0.45 }}
+                aria-label="Today's Mission"
+                className="ring-edge relative overflow-hidden rounded-2xl p-[1.5px]"
+                style={{ background: `linear-gradient(120deg, oklch(from var(--attr-${todaysMission.category}) 60% c h / 65%), oklch(0.68 0.19 295 / 45%))` }}
               >
                 <div className="surface-quest grain relative rounded-2xl p-4 sm:p-5">
                   <div className="mb-3 flex items-center justify-between">
                     <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/70">
-                      ⚡ Next Quest
+                      Today's Mission
                     </span>
-                    <span className="font-mono text-xs" style={{ color: `var(--attr-${nextQuest.category})` }}>
-                      {CATEGORY_META[nextQuest.category]?.label} · {nextQuest.difficulty}
-                    </span>
-                  </div>
-                  <h2 className="font-display text-lg font-bold leading-snug sm:text-xl">{nextQuest.title}</h2>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 font-mono text-sm">
-                    <span className="text-gold">+{nextQuest.xpReward} XP</span>
-                    <span className="text-gold/60">+{nextQuest.goldReward} G</span>
-                    <span style={{ color: `var(--attr-${nextQuest.category})` }}>
-                      +{nextQuest.category ? CATEGORY_META[nextQuest.category]?.attr : ""} gain
+                    <span
+                      className="font-mono text-xs"
+                      style={{ color: `var(--attr-${todaysMission.category})` }}
+                    >
+                      {CATEGORY_META[todaysMission.category]?.label} · {todaysMission.difficulty}
                     </span>
                   </div>
-                  <Button
-                    onClick={() => handleComplete(nextQuest._id)}
+                  <h2 className="font-display text-xl font-bold leading-snug sm:text-2xl">
+                    {todaysMission.title}
+                  </h2>
+                  <div className="mt-2 flex flex-wrap items-center gap-3 font-mono text-sm">
+                    <span className="text-gold">+{todaysMission.xpReward} XP</span>
+                    <span className="text-gold/70">+{todaysMission.goldReward} Gold</span>
+                    <span style={{ color: `var(--attr-${todaysMission.category})` }}>
+                      +{CATEGORY_META[todaysMission.category]?.attr} gain
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleComplete(todaysMission._id)}
                     disabled={completingId !== null}
-                    className="glow-violet mt-4 w-full font-bold"
-                    size="lg"
+                    className="glow-violet mt-4 w-full rounded-xl bg-primary py-3 font-display text-base font-black uppercase tracking-widest text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-60"
                   >
-                    {completingId === nextQuest._id ? (
-                      <Loader2 className="size-4 animate-spin" />
+                    {completingId === todaysMission._id ? (
+                      <Loader2 className="mx-auto size-5 animate-spin" />
                     ) : (
-                      <Sparkles className="size-4.5" />
+                      "Complete Quest"
                     )}
-                    Complete Quest
-                  </Button>
+                  </button>
                 </div>
+              </motion.section>
+            ) : (
+              <motion.section
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                aria-label="New quest"
+                className="surface-panel ring-edge rounded-2xl p-4 sm:p-5"
+              >
+                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  Accept a new quest
+                </h2>
+                <NewQuestComposer />
               </motion.section>
             )}
 
-            {/* composer */}
-            <motion.section
-              id="quests"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.16, duration: 0.45 }}
-              className="surface-panel ring-edge scroll-mt-20 rounded-2xl p-4 sm:p-5"
-              aria-label="New quest"
-            >
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Accept a new quest
-              </h2>
-              <NewQuestComposer />
-            </motion.section>
+            {/* composer (when mission shown) */}
+            {todaysMission && (
+              <motion.section
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.14, duration: 0.45 }}
+                className="surface-panel ring-edge rounded-2xl p-4 sm:p-5"
+                aria-label="New quest"
+              >
+                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  Accept another quest
+                </h2>
+                <NewQuestComposer />
+              </motion.section>
+            )}
 
-            {/* quest list */}
+            {/* preview rail: next reward + streak milestone + rank */}
+            <div className="grid gap-4 sm:grid-cols-3">
+              <motion.div
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.4 }}
+                className="surface-panel ring-edge rounded-xl p-3.5"
+              >
+                <Gift className="mb-2 size-4.5 text-gold" />
+                <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Next reward</div>
+                <div className="font-display mt-1 text-xl font-black text-gradient-gold">
+                  LV {character.level + 1}
+                </div>
+                <div className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+                  {xpRemaining} XP away
+                </div>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.24, duration: 0.4 }}
+                className="surface-panel ring-edge rounded-xl p-3.5"
+              >
+                <Flame className="mb-2 size-4.5 text-gold" />
+                <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Streak milestone</div>
+                {milestone ? (
+                  <>
+                    <div className="font-display mt-1 text-xl font-black">{milestone} days</div>
+                    <div className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+                      {milestone - character.streak} to go
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="font-display mt-1 text-xl font-black text-gradient-gold">Maxed</div>
+                    <div className="mt-0.5 font-mono text-[11px] text-muted-foreground">legend status</div>
+                  </>
+                )}
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.28, duration: 0.4 }}
+                className="surface-panel ring-edge rounded-xl p-3.5"
+              >
+                <Crown className="mb-2 size-4.5 text-gold" />
+                <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Rank</div>
+                {board ? (
+                  <>
+                    <div className="font-display mt-1 text-xl font-black">
+                      {board.myRank !== null ? `#${board.myRank}` : "--"}
+                    </div>
+                    <Link to="/leaderboard" className="mt-0.5 inline-block font-mono text-[11px] text-primary hover:underline">
+                      of {board.total} heroes — view
+                    </Link>
+                  </>
+                ) : (
+                  <div className="mt-2 h-5 animate-pulse rounded bg-muted" />
+                )}
+              </motion.div>
+            </div>
+
+            {/* quest board */}
             <motion.section
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.22, duration: 0.45 }}
+              transition={{ delay: 0.32, duration: 0.45 }}
               aria-label="Quests"
             >
               <div className="mb-2 flex items-center justify-between px-1">
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                   Quest Board
                 </h2>
-                <span className="font-mono text-[11px] text-muted-foreground/60">
-                  {quests?.filter((q) => q.status === "active").length ?? 0} active
-                </span>
+                <span className="font-mono text-[11px] text-muted-foreground/60">{activeCount} active</span>
               </div>
               {!quests ? (
                 <div className="space-y-2">
@@ -345,7 +415,7 @@ export default function Dashboard() {
                     <div key={i} className="surface-quest ring-edge h-[74px] animate-pulse rounded-xl" />
                   ))}
                 </div>
-              ) : quests.length === 0 ? (
+              ) : (quests ?? []).length === 0 ? (
                 <div className="surface-quest ring-edge flex flex-col items-center gap-2 rounded-xl py-10 text-center">
                   <Swords className="size-7 text-muted-foreground/40" />
                   <p className="text-sm font-medium">No quests yet</p>
@@ -356,7 +426,7 @@ export default function Dashboard() {
               ) : (
                 <div className="space-y-2">
                   <AnimatePresence initial={false}>
-                    {quests.map((q) => (
+                    {(quests ?? []).map((q) => (
                       <QuestCard
                         key={q._id}
                         quest={q}
@@ -374,10 +444,10 @@ export default function Dashboard() {
             {/* adventure log */}
             <motion.div
               id="log"
-              className="scroll-mt-20"
+              className="scroll-mt-24"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.28, duration: 0.45 }}
+              transition={{ delay: 0.36, duration: 0.45 }}
             >
               <AdventureLog entries={activity ?? undefined} />
             </motion.div>
@@ -388,24 +458,6 @@ export default function Dashboard() {
       {/* overlays */}
       <RewardFloats reward={reward} onDone={() => setReward(null)} />
       <LevelUpModal data={levelUp} onClose={() => setLevelUp(null)} />
-
-      {/* ── mobile bottom nav ── */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border/50 bg-background/85 backdrop-blur-md sm:hidden" aria-label="Primary">
-        <div className="grid grid-cols-3">
-          <a href="#character" className="flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-semibold text-muted-foreground">
-            <Swords className="size-4.5 text-primary" />
-            Character
-          </a>
-          <a href="#quests" className="flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-semibold text-muted-foreground">
-            <Flame className="size-4.5" />
-            Quests
-          </a>
-          <a href="#log" className="flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-semibold text-muted-foreground">
-            <Sparkles className="size-4.5" />
-            Log
-          </a>
-        </div>
-      </nav>
-    </div>
+    </GameShell>
   );
 }

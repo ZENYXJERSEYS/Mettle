@@ -1,6 +1,7 @@
 import '@vly-ai/integrations';
 import { Toaster } from "@/components/ui/sonner";
 import { RequireAuth } from "@/components/RequireAuth";
+import BrandedLoading from "@/components/BrandedLoading";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
@@ -13,15 +14,14 @@ import "./index.css";
 const Landing = lazy(() => import("./pages/Landing.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
+const Shop = lazy(() => import("./pages/Shop.tsx"));
+const Inventory = lazy(() => import("./pages/Inventory.tsx"));
+const Leaderboard = lazy(() => import("./pages/Leaderboard.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
-// Simple loading fallback for route transitions
+// Branded loading fallback for route transitions
 function RouteLoading() {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-pulse text-muted-foreground">Loading...</div>
-    </div>
-  );
+  return <BrandedLoading />;
 }
 
 /** Silent error boundary — if VlyToolbar crashes it renders nothing instead of
@@ -129,6 +129,30 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <Dashboard />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/shop"
+                element={
+                  <RequireAuth>
+                    <Shop />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/inventory"
+                element={
+                  <RequireAuth>
+                    <Inventory />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/leaderboard"
+                element={
+                  <RequireAuth>
+                    <Leaderboard />
                   </RequireAuth>
                 }
               />

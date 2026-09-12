@@ -5,6 +5,7 @@ import {
   Trophy,
   Flame,
   Sparkles,
+  ShoppingBag,
   type LucideIcon,
 } from "lucide-react";
 
@@ -13,6 +14,7 @@ const KIND_ICON: Record<string, LucideIcon> = {
   quest_created: PlusCircle,
   level_up: Trophy,
   milestone: Flame,
+  purchase: ShoppingBag,
 };
 
 const KIND_COLOR: Record<string, string> = {
@@ -20,6 +22,7 @@ const KIND_COLOR: Record<string, string> = {
   quest_created: "var(--attr-intellect)",
   level_up: "var(--gold)",
   milestone: "var(--attr-creativity)",
+  purchase: "var(--attr-creativity)",
 };
 
 function timeAgo(ts: number) {
@@ -119,6 +122,9 @@ export default function AdventureLog({
                   <span className="shrink-0 rounded bg-gold/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-gold">
                     LVL UP
                   </span>
+                )}
+                {e.kind === "purchase" && e.gold != null && (
+                  <div className="shrink-0 font-mono text-[11px] text-gold/70">{e.gold} G</div>
                 )}
               </motion.li>
             );
