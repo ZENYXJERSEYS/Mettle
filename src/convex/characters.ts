@@ -59,7 +59,15 @@ export const getMyCharacter = query({
   },
 });
 
-/** Create the character on demand (called from the dashboard when missing). */
+/** Sanitize user text: trim, cap length, strip angle brackets to prevent injection. */
+function clean(input: string, max: number): string {
+  return input
+    .replace(/[<>]/g, "")
+    .trim()
+    .slice(0, max);
+}
+
+/** Create the character on demand (called from onboarding when missing). */
 export const createCharacter = mutation({
   args: { name: v.optional(v.string()) },
   handler: async (ctx, args) => {
@@ -161,6 +169,96 @@ export const creditRewards = internalMutation({
       formChanged: newForm !== oldForm,
       streak,
     };
+  },
+});
+
+/** Persist onboarding profile + mark complete. Called once at the end of the wizard. */
+export const finalizeOnboarding = mutation({
+  args: {
+    characterName: v.string(),
+    displayName: v.optional(v.string()),
+    pronouns: v.optional(v.string()),
+    bio: v.optional(v.string()),
+    interests: v.optional(v.array(v.string())),
+    focusAttrs: v.optional(v.array(v.string())),
+    motivations: v.optional(v.array(v.string())),
+    timezone: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const char = await ctx.db
+      .query("characters")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+    if (!char) throw new Error("Create your character first");
+
+    const name = clean(args.characterName, 24);
+    if (name.length < 2) throw new Error("Character name must be at least 2 characters.");
+
+    await ctx.db.patch(char._id, {
+      name,
+      displayName: args.displayName ? clean(args.displayName, 32) : undefined,
+      pronouns: args.pronouns ? clean(args.pronouns, 24) : undefined,
+      bio: args.bio ? clean(args.bio, 160) : undefined,
+      interests: (args.interests ?? []).slice(0, 12).map((i) => clean(i, 24)),
+      focusAttrs: (args.focusAttrs ?? [])
+        .filter((a) => (ATTRS as readonly string[]).includes(a))
+        .slice(0, 3),
+      motivations: (args.motivations ?? []).slice(0, 8).map((m) => clean(m, 32)),
+      timezone: args.timezone ? clean(args.timezone, 64) : undefined,
+      onboardingComplete: true,
+      privacy: char.privacy ?? "public",
+    });
+    return { ok: true };
+  },
+});
+
+/** Editable profile fields (privacy controls included). */
+export const updateProfile = mutation({
+  args: {
+    name: v.optional(v.string()),
+    displayName: v.optional(v.string()),
+    pronouns: v.optional(v.string()),
+    bio: v.optional(v.string()),
+    interests: v.optional(v.array(v.string())),
+    focusAttrs: v.optional(v.array(v.string())),
+    privacy: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const char = await ctx.db
+      .query("characters")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+    if (!char) throw new Error("Character not found");
+
+    const patch: Record<string, unknown> = {};
+    if (args.name !== undefined) {
+      const name = clean(args.name, 24);
+      if (name.length < 2) throw new Error("Character name must be at least 2 characters.");
+      patch.name = name;
+    }
+    if (args.displayName !== undefined)
+      patch.displayName = args.displayName ? clean(args.displayName, 32) : undefined;
+    if (args.pronouns !== undefined)
+      patch.pronouns = args.pronouns ? clean(args.pronouns, 24) : undefined;
+    if (args.bio !== undefined) patch.bio = args.bio ? clean(args.bio, 160) : undefined;
+    if (args.interests !== undefined)
+      patch.interests = args.interests.slice(0, 12).map((i) => clean(i, 24));
+    if (args.focusAttrs !== undefined)
+      patch.focusAttrs = args.focusAttrs
+        .filter((a) => (ATTRS as readonly string[]).includes(a))
+        .slice(0, 3);
+    if (args.privacy !== undefined) {
+      if (!["public", "friends", "private"].includes(args.privacy))
+        throw new Error("Invalid privacy setting.");
+      patch.privacy = args.privacy;
+    }
+    if (Object.keys(patch).length > 0) await ctx.db.patch(char._id, patch);
+    return { ok: true };
   },
 });
 

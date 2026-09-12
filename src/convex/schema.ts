@@ -48,6 +48,17 @@ const schema = defineSchema(
       streak: v.number(),
       lastCompletionDay: v.optional(v.string()), // "YYYY-MM-DD" in UTC
       form: v.number(), // crystal form tier (1-4), derived visually from level
+      // profile / onboarding
+      displayName: v.optional(v.string()),
+      pronouns: v.optional(v.string()),
+      bio: v.optional(v.string()), // max 160 chars
+      interests: v.optional(v.array(v.string())),
+      focusAttrs: v.optional(v.array(v.string())), // 1-3 of ATTRS
+      motivations: v.optional(v.array(v.string())),
+      timezone: v.optional(v.string()),
+      onboardingComplete: v.optional(v.boolean()),
+      longestStreak: v.optional(v.number()),
+      privacy: v.optional(v.string()), // public | friends | private (profile+activity)
     })
       .index("by_user", ["userId"])
       .index("by_level", ["level"]),
@@ -153,6 +164,17 @@ const schema = defineSchema(
       userId: v.id("users"),
       truthfulMode: v.boolean(), // truthfulness prompt on completion; default true
     }).index("by_user", ["userId"]),
+
+    // Friend requests — status: pending | accepted | declined
+    friendRequests: defineTable({
+      fromUserId: v.id("users"),
+      toUserId: v.id("users"),
+      status: v.string(),
+      createdAt: v.number(),
+      respondedAt: v.optional(v.number()),
+    })
+      .index("by_to", ["toUserId", "status"])
+      .index("by_from", ["fromUserId", "status"]),
   },
   {
     schemaValidation: false,
