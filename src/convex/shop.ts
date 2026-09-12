@@ -101,7 +101,6 @@ export const listShop = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
 
-    const ownedSet = new Set(owned.map((o) => o.itemKey));
     const equippedRows = owned.filter((o) => o.equipped);
     const order = new Map<string, number>(RARITIES.map((r, i) => [r as string, i]));
     const sorted = [...items].sort(
@@ -111,7 +110,7 @@ export const listShop = query({
 
     return {
       items: sorted.map(({ _id, _creationTime, ...rest }) => rest),
-      owned: ownedSet,
+      owned: owned.map((o) => o.itemKey), // plain array — Sets are not a valid Convex return type
       equippedKeys: equippedRows.map((e) => e.itemKey),
       gold: char?.gold ?? 0,
       acquiredAt: Object.fromEntries(owned.map((o) => [o.itemKey, o.acquiredAt])),

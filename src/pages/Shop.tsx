@@ -127,7 +127,7 @@ interface ShopItem {
 
 interface ShopData {
   items: ShopItem[];
-  owned: Set<string>;
+  owned: string[]; // array of item keys — Sets can't cross the Convex wire
   equippedKeys: string[];
   gold: number;
   acquiredAt: Record<string, number>;
@@ -181,6 +181,11 @@ export default function Shop() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const ownedSet = useMemo(
+    () => new Set(shop?.owned ?? []),
+    [shop?.owned],
+  );
+
   const featured = useMemo(() => {
     if (!shop) return null;
     return (
@@ -211,10 +216,10 @@ export default function Shop() {
   const recommended = useMemo(() => {
     if (!shop || !character) return [];
     return shop.items
-      .filter((i) => !shop.owned.has(i.key) && i.price <= character.gold + 120)
+      .filter((i) => !ownedSet.has(i.key) && i.price <= character.gold + 120)
       .sort((a, b) => b.price - a.price)
       .slice(0, 3);
-  }, [shop, character]);
+  }, [shop, character, ownedSet]);
 
   const handleClaim = async () => {
     if (!confirmItem) return;
@@ -282,7 +287,7 @@ export default function Shop() {
   const renderCard = (item: ShopItem, i: number) => {
     const Icon = ICONS[item.icon] ?? Sparkles;
     const style = RARITY[item.rarity] ?? RARITY.common;
-    const isOwned = shop.owned.has(item.key);
+    const isOwned = ownedSet.has(item.key);
     const isEquipped = shop.equippedKeys.includes(item.key);
     const canAfford = shop.gold >= item.price;
     return (
@@ -431,7 +436,7 @@ export default function Shop() {
                   <span className="rounded-full bg-secondary/60 px-3 py-1 text-xs font-semibold text-muted-foreground">
                     {CATEGORY_LABEL[featured.category] ?? featured.category}
                   </span>
-                  {shop.owned.has(featured.key) ? (
+                  {shop.owned.includes(featured.key) ? (
                     <span className="flex items-center gap-1 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs font-bold text-emerald-400">
                       <Check className="size-3.5" /> In your satchel
                     </span>
