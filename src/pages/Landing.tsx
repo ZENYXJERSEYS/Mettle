@@ -7,27 +7,11 @@ import {
   Sparkles,
   Trophy,
   Zap,
-  Brain,
-  Dumbbell,
-  HeartPulse,
-  BookOpen,
-  Shield,
-  PenLine,
 } from "lucide-react";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CATEGORY_META, DIFFICULTY_META } from "@/convex/gameRules";
-
-const CATEGORY_ICONS = {
-  Brain,
-  Dumbbell,
-  HeartPulse,
-  BookOpen,
-  Shield,
-  Sparkles,
-  PenLine,
-} as const;
+import { ShowcaseSection } from "@/components/ShowcaseCarousel";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -223,69 +207,7 @@ export default function Landing() {
         </section>
 
         {/* ── material showcase ── */}
-        <section className="border-t border-border/50 py-16">
-          <motion.h2
-            initial={{ opacity: 0, y: 18 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
-            className="font-display mb-3 text-center text-2xl font-bold sm:text-3xl"
-          >
-            Stats with weight. Rewards with lore.
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="mb-10 text-center text-sm text-muted-foreground"
-          >
-            Six attributes. Four difficulties. Every quest maps to who you become.
-          </motion.p>
-
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {Object.entries(CATEGORY_META).map(([key, meta], i) => {
-              const Icon = CATEGORY_ICONS[meta.icon as keyof typeof CATEGORY_ICONS] ?? Sparkles;
-              return (
-                <motion.div
-                  key={key}
-                  initial={{ opacity: 0, y: 18 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.07, duration: 0.45 }}
-                  className="surface-quest ring-edge group rounded-xl p-4 transition-transform duration-200 hover:-translate-y-1"
-                >
-                  <div
-                    className="mb-3 flex size-9 items-center justify-center rounded-lg"
-                    style={{
-                      background: `oklch(from var(--attr-${key}) 65% c h / 15%)`,
-                      boxShadow: `0 0 14px oklch(from var(--attr-${key}) 65% c h / 25%)`,
-                    }}
-                  >
-                    <Icon className="size-4.5" style={{ color: `var(--attr-${key})` }} />
-                  </div>
-                  <div className="text-sm font-semibold">{meta.label}</div>
-                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                    → {meta.attr}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-
-          {/* difficulty strip */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-            {(Object.keys(DIFFICULTY_META) as (keyof typeof DIFFICULTY_META)[]).map((d) => (
-              <Badge
-                key={d}
-                variant="outline"
-                className="border-border/60 bg-secondary/30 px-3 py-1 text-xs"
-              >
-                <span className="font-semibold">{DIFFICULTY_META[d].label}</span>
-                <span className="ml-2 font-mono text-gold/90">+{DIFFICULTY_META[d].xp} XP</span>
-                <span className="ml-1.5 font-mono text-gold/60">+{DIFFICULTY_META[d].gold} G</span>
-              </Badge>
-            ))}
-          </div>
-        </section>
+        <ShowcaseSection />
 
         {/* ── streak / persistence strip ── */}
         <section className="border-t border-border/50 py-16">
