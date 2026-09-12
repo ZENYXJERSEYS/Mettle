@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
-import { internalMutation, mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { mutation, query } from "./_generated/server";
 import {
   CATEGORY_TO_ATTR,
   DIFFICULTY_META,
@@ -81,7 +82,7 @@ export const updateQuest = mutation({
     if (quest.userId !== userId) throw new Error("Not your quest");
     if (quest.status === "completed") throw new Error("Completed quests can't be edited");
 
-    const patch: Partial<{ title: string; category: string; difficulty: string }> = {};
+    const patch: Partial<{ title: string; category: string; difficulty: string; xpReward: number; goldReward: number }> = {};
     if (title !== undefined) {
       const vres = validateQuestInput({ title, category: category ?? quest.category, difficulty: difficulty ?? quest.difficulty });
       if (!vres.ok) throw new Error(vres.error);
@@ -120,9 +121,17 @@ export const deleteQuest = mutation({
 });
 
 /** Atomic quest completion — ownership, eligibility, rewards, streak, log, dedupe. */
+interface CompleteQuestResult {
+  alreadyCompleted: boolean;
+  questId: string;
+  completionId?: string;
+  reward?: { xp: number; gold: number; attr: string; attrGain: number };
+  levelUp?: { newLevel: number; gold: number; attrPoints: number; newTitle?: string } | null;
+}
+
 export const completeQuest = mutation({
   args: { questId: v.id("quests") },
-  handler: async (ctx, { questId }) => {
+  handler: async (ctx, { questId }): Promise<CompleteQuestResult> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
@@ -139,7 +148,12 @@ export const completeQuest = mutation({
         .query("questCompletions")
         .withIndex("by_quest", (q) => q.eq("questId", questId))
         .first();
-      return { alreadyCompleted: true, questId, ...(prior ? { completionId: prior._id } : {}) };
+      const priorResult: CompleteQuestResult = {
+        alreadyCompleted: true,
+        questId,
+        ...(prior ? { completionId: prior._id } : {}),
+      };
+      return priorResult;
     }
 
     const now = Date.now();
@@ -195,9 +209,9 @@ export const completeQuest = mutation({
       await ctx.db.insert("activityLog", {
         userId,
         kind: "level_up",
-        message: `Reached level ${credit.level}${credit.levelUps.some((lu) => lu.title) ? ` — new title earned` : ""}`,
+        message: `Reached level ${credit.level}${credit.levelUps.some((lu: { title?: string }) => lu.title) ? ` — new title earned` : ""}`,
         icon: "Trophy",
-        gold: credit.levelUps.reduce((a, lu) => a + lu.gold, 0),
+        gold: credit.levelUps.reduce((a: number, lu: { gold: number }) => a + lu.gold, 0),
         dayKey,
         createdAt: now + 2,
       });
@@ -215,9 +229,9 @@ export const completeQuest = mutation({
       levelUp: credit.leveledUp
         ? {
             newLevel: credit.level,
-            gold: credit.levelUps.reduce((a, lu) => a + lu.gold, 0),
+            gold: credit.levelUps.reduce((a: number, lu: { gold: number }) => a + lu.gold, 0),
             attrPoints: credit.levelUps[0]?.attrPoints ?? 1,
-            newTitle: credit.levelUps.map((lu) => lu.title).find(Boolean),
+            newTitle: credit.levelUps.map((lu: { title?: string }) => lu.title).find(Boolean),
           }
         : null,
     };

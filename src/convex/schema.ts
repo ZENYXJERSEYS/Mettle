@@ -4,7 +4,7 @@ import { Infer, v } from "convex/values";
 
 // default user roles. can add / remove based on the project as needed
 export const ROLES = {
-  ADMIN: "doc",
+  ADMIN: "admin",
   USER: "user",
   MEMBER: "member",
 } as const;

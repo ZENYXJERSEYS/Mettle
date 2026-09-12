@@ -8,10 +8,27 @@ import {
   levelUpReward,
   nextStreak,
   titleForLevel,
-  type Attr,
 } from "./gameRules";
 
 const DEFAULT_NAME = "Wanderer";
+
+export interface LevelUpInfo {
+  level: number;
+  gold: number;
+  attrPoints: number;
+  title?: string;
+}
+export interface CreditResult {
+  characterId: string;
+  xp: number;
+  level: number;
+  gold: number;
+  leveledUp: boolean;
+  levelUps: LevelUpInfo[];
+  form: number;
+  formChanged: boolean;
+  streak: number;
+}
 
 /** Get (or lazily create) the signed-in user's character. */
 export const getMyCharacter = query({
@@ -71,7 +88,7 @@ export const creditRewards = internalMutation({
     attrGain: v.number(),
     dayKey: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<CreditResult> => {
     const char = await ctx.db
       .query("characters")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
@@ -108,7 +125,7 @@ export const creditRewards = internalMutation({
     await ctx.db.patch(char._id, patch);
 
     // Level-up rewards + activity log entries
-    const levelUps: { level: number; gold: number; attrPoints: number; title?: string }[] = [];
+    const levelUps: LevelUpInfo[] = [];
     let bonusGold = 0;
     if (leveledUp) {
       for (let l = char.level + 1; l <= newLevel; l++) {
@@ -148,7 +165,34 @@ export const grantXp = mutation({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
     if (!char) throw new Error("Character not found");
-    await ctx.db.patch(char._id, { xp: char.xp + amt });
-    return { ok: true };
+    const newXp = char.xp + amt;
+    const newLevel = levelFromXp(newXp).level;
+    const leveledUp = newLevel > char.level;
+    await ctx.db.patch(char._id, {
+      xp: newXp,
+      level: newLevel,
+      form: formForLevel(newLevel),
+      title: leveledUp ? titleForLevel(newLevel) : char.title,
+    });
+    if (leveledUp) {
+      const reward = levelUpReward(newLevel);
+      await ctx.db.patch(char._id, { gold: char.gold + reward.gold });
+      await ctx.db.insert("activityLog", {
+        userId,
+        kind: "level_up",
+        message: `Reached level ${newLevel}`,
+        icon: "Trophy",
+        gold: reward.gold,
+        dayKey: new Date().toISOString().slice(0, 10),
+        createdAt: Date.now(),
+      });
+    }
+    return {
+      ok: true,
+      leveledUp,
+      levelUp: leveledUp
+        ? { newLevel, gold: levelUpReward(newLevel).gold, attrPoints: 1 }
+        : null,
+    };
   },
 });
